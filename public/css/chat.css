@@ -1,0 +1,383 @@
+/* main.css */
+
+/* Global styles */
+body {
+    font-family: 'Microsoft Yahei', 'PingFang SC', Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #fff;
+    user-select: none;
+}
+
+a {
+    color: #ddd;
+    text-decoration: none;
+    transition: color 0.1s ease;
+}
+
+a:hover {
+    color: #000;
+}
+
+button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #fafafa;
+    color: #555;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.1s ease;
+    white-space: nowrap;
+}
+
+button:hover {
+    background-color: #f5f5f5;
+}
+
+button svg { 
+    width: 16px;
+    min-width: 16px;
+    height: 16px;
+    fill: #555;
+}
+
+select {
+    background-color: #fff;
+    color: #000;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 14px;
+    outline: none;
+}
+
+.container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+}
+
+/* System prompt section */
+.prompt-info-section {
+    width: calc(100% - 40px);
+    margin: 20px 20px 0 20px;
+    border-radius: 8px;
+    overflow: hidden;
+    background-color: #fff;
+}
+
+.prompt-info-header {
+    padding: 10px 15px;
+    background-color: #fafafa;
+    color: #555;
+    font-size: 14px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.prompt-info-header:hover {
+    background-color: #f5f5f5;
+}
+
+.prompt-info-content {
+    display: none;
+    padding: 10px 15px;
+    background-color: #fafafa;
+    max-height: 200px;
+    user-select: text;
+    overflow-y: auto;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+.prompt-info-content::-webkit-scrollbar {
+    display: none;
+}
+
+.prompt-info-content div {
+    white-space: pre-wrap;
+    font-size: 12px;
+    color: #555;
+}
+
+.toggle-icon {
+    transition: transform 0.1s ease;
+    width: 18px;
+    min-width: 18px;
+    height: 18px;
+    color: #666;
+    fill: #666;
+}
+
+.toggle-icon.rotated {
+    transform: rotate(180deg);
+}
+
+/* Navigation bar */
+.navbar {
+    display: flex;
+    margin: 10px 20px 0 20px;
+    gap: 10px;
+    width: calc(100% - 40px);
+    justify-content: flex-start;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.navbar button { 
+    height: 28px;
+    width: 28px;
+    padding: 0 10px;
+}
+
+.navbar select {
+    padding: 5px 10px;
+}
+
+.chat-container {
+    width: calc(100% - 40px);
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    padding: 20px;
+    align-items: center;
+    overflow-y: hidden;
+}
+
+/* Chat bubbles */
+.chat-bubbles {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    overflow-y: auto;
+    margin-bottom: 20px;
+    user-select: text;
+    max-width: 1000px;
+    width: 100%;
+}
+
+.chat-bubbles::-webkit-scrollbar {
+    width: 6px;
+}
+
+.chat-bubbles::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.chat-bubbles::-webkit-scrollbar-thumb {
+    background-color: #ccc;
+    border-radius: 3px;
+}
+
+.chat-bubbles::-webkit-scrollbar-thumb:hover {
+    background-color: #bbb;
+}
+
+.bubble {
+    padding: 10px 15px;
+    margin-bottom: 10px;
+    border-radius: 10px;
+    word-wrap: break-word;
+    color: #000;
+    position: relative;
+}
+
+.thinking {
+    max-height: 60px;
+    flex-shrink: 0;
+    font-size: 50%;
+    color: #555;
+    overflow-y: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.thinking::-webkit-scrollbar {
+  display: none;
+}
+
+.bubble svg { 
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    min-width: 16px;
+    opacity: 0;
+    cursor: pointer;
+    transition: opacity 0.1s ease;
+    fill: #555;
+    color: #555;
+    z-index: 999;
+}
+
+.bubble:hover svg {
+    opacity: 1;
+}
+
+.edit-icon {
+    top: 5px;
+    right: 5px;
+}
+
+.retry-icon {
+    bottom: 5px;
+    right: 5px;
+}
+
+.t2i-button {
+    bottom: 5px;
+    right: 28px;
+}
+
+.t2i-image-container img {
+    width: 100%;
+    max-width: 400px;
+    border-radius: 10px;
+    margin-bottom: 10px;
+}
+
+.edit-textarea {
+    max-width: 100%;
+    width: 1000px;
+    min-height: 200px;
+    padding: 10px 15px;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    font-family: inherit;
+    font-size: inherit;
+    resize: vertical;
+    background-color: inherit;
+    color: inherit;
+    box-sizing: border-box;
+    outline: none;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+.edit-textarea::-webkit-scrollbar {
+    display: none;
+}
+
+.bubble p {
+    white-space: pre-wrap;
+}
+
+.bubble.user {
+    max-width: 85%;
+    background-color: #f5f5f5;
+    margin-left: auto;
+    margin-right: 5px;
+}
+
+.bubble.assistant {
+    max-width: calc(100% - 40px);
+    margin-left: 5px;
+    margin-right: auto;
+}
+
+.bubble.assistant:hover {
+    background-color: #f5f5f5;
+}
+
+.bubble button {
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding: 2px 4px;
+    font-size: 12px;
+    border-radius: 2px;
+    max-width: 80%;
+    margin-bottom: 10px;
+}
+
+/* Input area */
+.input-area {
+    position: relative;
+    display: flex;
+    gap: 10px;
+    max-width: 1000px;
+    width: 100%;
+}
+
+.input-area textarea {
+    font-family: 'Microsoft Yahei', 'PingFang SC', Arial, sans-serif;
+    flex-grow: 1;
+    padding: 10px 120px 10px 15px;
+    border: 1px solid #ddd;
+    border-radius: 20px;
+    resize: none;
+    font-size: 16px;
+    outline: none;
+    height: 48px;
+    word-break: break-all;
+    overflow-y: auto;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+.input-area textarea::-webkit-scrollbar {
+    display: none;
+}
+
+.input-area .button-group {
+    position: absolute;
+    display: flex;
+    gap: 2px;
+    right: 10px;
+    bottom: 10px;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.input-area button {
+    color: #fff;
+    border: none;
+    border-radius: 0;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background-color 0.1s;
+    height: 50px;
+    width: 50px;
+}
+
+.input-area button:hover {
+    background-color: #282828;
+}
+
+.input-area button svg { 
+    width: 20px;
+    min-width: 20px;
+    height: 20px;
+}
+
+.stop:hover,
+.input-area button.stop:hover {
+    background-color: #ff0019;
+    color: #fff;
+}
+
+.stop:hover svg,
+.input-area button:hover svg { 
+    fill: #fff;
+}
+
+.llm-status {
+    margin-left: auto;
+    padding: 0 5px;
+    font-size: 12px;
+    color: #555;
+    white-space: nowrap;
+}
+.llm-status.connected {
+    color: green;
+}
+.llm-status.disconnected {
+    color: red;
+}

@@ -1,0 +1,13 @@
+__pycache__
+.vscode
+/venv
+/test
+/build
+/dist
+/output
+/public/img/comfyui
+/public/img/uploads
+/public/json/cards
+main.spec
+setup.iss
+.env

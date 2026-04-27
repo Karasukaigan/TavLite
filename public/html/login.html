@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title tr>Login</title>
+    <link rel="icon" href="/img/logo.png">
+    <link rel="stylesheet" href="/css/settings.css">
+    <script src="/js/i18n.js"></script>
+    <script src="/js/toast.js"></script>
+</head>
+
+<body>
+    <div class="container">
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="password" tr>Password</label>
+                <input type="password" id="password" placeholder="" required autocomplete="current-password">
+            </div>
+            <button type="submit" tr>Login</button>
+        </form>
+    </div>
+</body>
+
+<script>
+    document.addEventListener('DOMContentLoaded', async () => {
+        try {
+            const res = await fetch('/api/auth/check');
+            const data = await res.json();
+            if (data.authenticated) {
+                const params = new URLSearchParams(window.location.search);
+                window.location.href = params.get('redirect') || '/';
+                return;
+            }
+        } catch (e) {
+            console.error('Auth check failed:', e);
+        }
+
+        await i18n.init("login", i18n.getBrowserLanguage());
+        toast.init();
+    });
+
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const password = document.getElementById('password').value;
+        try {
+            const res = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password })
+            });
+            if (res.ok) {
+                const params = new URLSearchParams(window.location.search);
+                window.location.href = params.get('redirect') || '/';
+            } else {
+                toast.show(i18n.tr('Invalid password'), 'error');
+            }
+        } catch (e) {
+            toast.show(i18n.tr('Connection error'), 'error');
+        }
+    });
+</script>
+
+</html>

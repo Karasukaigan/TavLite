@@ -1,0 +1,488 @@
+body {
+    font-family: 'Microsoft Yahei', 'PingFang SC', Arial, sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    width: 100%;
+    height: 100vh;
+    margin: 0;
+    padding: 0;
+    background-color: #fff;
+    user-select: none;
+}
+
+a {
+    color: #ddd;
+    text-decoration: none;
+    transition: color 0.1s ease;
+}
+
+a:hover {
+    color: #000;
+}
+
+button {
+    background-color: #000;
+    color: #fff;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 16px;
+    /* transition: background-color 0.1s ease; */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    outline: none;
+}
+
+svg:focus {
+    outline: none;
+}
+
+button:hover {
+    background-color: #282828;
+}
+
+input[type="text"],
+input[type="password"],
+input[type="search"],
+input[type="number"],
+select {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 16px;
+    box-sizing: border-box;
+    transition: border-color 0.3s ease;
+    outline: none;
+}
+
+
+
+textarea {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 16px;
+    box-sizing: border-box;
+    resize: vertical;
+    outline: none;
+    font-family: 'Microsoft Yahei', 'PingFang SC', Arial, sans-serif;
+}
+
+svg {
+    width: 16px;
+    min-width: 16px;
+    height: 16px;
+    cursor: pointer;
+    fill: currentColor;
+}
+
+/* Tabs */
+.tabs {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    width: calc(100% - 40px);
+    display: flex;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.tab-button {
+    margin: 0;
+    height: 28px;
+    padding: 0 10px;
+    font-size: 14px;
+    background-color: #fafafa;
+    color: #555;
+}
+
+.tab-button:hover {
+    background-color: #f5f5f5;
+    color: #555;
+}
+
+.tab-button.active {
+    background-color: #000;
+    color: white;
+}
+
+.tab-button.active:hover {
+    background-color: #000;
+}
+
+.tab-hidden {
+    color: transparent;
+    background: transparent;
+}
+
+.tab-content {
+    padding: 0 20px;
+    display: none;
+    min-width: 400px;
+    max-width: calc(100% - 40px);
+}
+
+@media (max-width: 600px) {
+    .tab-content {
+        width: 100%;
+        min-width: 0px;
+    }
+}
+
+.tab-content.active {
+    display: block;
+}
+
+.container {
+    margin: 20px auto;
+    background-color: #fff;
+    padding: 20px;
+    border: 1px solid #ddd;
+    border-radius: 12px;
+    max-height: calc(100vh - 180px);
+    max-width: 1200px;
+    overflow-y: auto;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+@media (max-width: 500px) {
+    .container {
+        max-height: calc(100vh - 230px);
+    }
+}
+
+.container::-webkit-scrollbar {
+    display: none;
+}
+
+.container form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.container button {
+    width: 100%;
+}
+
+.container img {
+    margin: 0 auto;
+}
+
+.container a {
+    color: #000;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+label {
+    display: block;
+    color: #555;
+}
+
+.radio-group {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.radio-option {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.radio-option input[type="radio"] {
+    margin: 0;
+    accent-color: black;
+}
+
+.radio-option label {
+    color: #000;
+    font-weight: normal;
+}
+
+#qr-url {
+    margin-top: 5px;
+    color: #ddd;
+    font-size: 14px;
+    text-align: center;
+}
+
+/* Cards tab */
+.cards-tab-header {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.cards-tab-header button { 
+    padding: 10px 12px;
+}
+
+.card-item {
+    border: 1px solid #ddd;
+    border-radius: 8px;
+}
+
+.card-item:hover {
+    border-color: #c4c4c4;
+}
+
+.card-item svg:hover {
+    opacity: 0.7;
+}
+
+.card-header {
+    display: flex;
+    align-items: center;
+    padding: 10px;
+    gap: 10px;
+}
+
+.card-name {
+    flex-grow: 1;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    cursor: pointer;
+}
+
+#cards-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    height: calc(100% - 52px);
+    overflow-y: auto;
+}
+
+/* Concept art */
+.concept-art-area {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.concept-art-upload {
+    border: 1px dashed #bbb;
+    border-radius: 8px;
+    padding: 20px;
+    text-align: center;
+    cursor: pointer;
+    color: #888;
+    transition: border-color 0.2s;
+}
+
+.concept-art-upload:hover {
+    border-color: #000;
+    color: #555;
+}
+
+.concept-art-preview {
+    position: relative;
+    display: inline-block;
+    max-width: 100%;
+}
+
+.concept-art-image {
+    max-width: 100%;
+    max-height: 300px;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+    object-fit: contain;
+}
+
+.concept-art-remove {
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    width: 24px !important;
+    height: 24px;
+    padding: 0;
+    border: none;
+    border-radius: 4px;
+    background-color: transparent;
+    color: #999;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.concept-art-remove svg {
+    width: 16px;
+    height: 16px;
+}
+
+.concept-art-remove:hover {
+    color: #000;
+    background-color: rgba(0,0,0,0.06);
+}
+
+/* Card edit modal */
+.modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-dialog {
+    position: relative;
+    background: #fff;
+    border-radius: 12px;
+    width: 100%;
+    height: 100%;
+    max-width: 1200px;
+    max-height: 90vh;
+    overflow: hidden;
+    margin: 10px;
+    padding: 20px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    max-width: calc(100% - 30px);
+}
+
+.modal-title {
+    font-size: 20px;
+    font-weight: bold;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    user-select: text;
+}
+
+.modal-close-btn {
+    position: absolute;
+    right: 10px;
+    top: 10px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #999;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.modal-close-btn:hover {
+    background: none;
+    color: #333;
+}
+
+.modal-body {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    overflow-y: auto;
+    height: 100%;
+    max-height: calc(100% - 101px);
+}
+
+#card-edit-modal .card-prompt,
+#card-edit-modal .card-context,
+#modal-card-prompt,
+#modal-card-context {
+    width: 100%;
+    min-height: 300px;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 20px;
+    box-sizing: border-box;
+    resize: vertical;
+    outline: none;
+}
+
+#modal-card-save {
+    margin-top: 15px; 
+    margin-bottom: 0;
+    width: 100%;
+}
+
+/* Alternative Messages */
+#messages-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.message-item {
+    position: relative;
+}
+
+.message-item textarea {
+    width: 100%;
+    min-height: 300px;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 20px;
+    box-sizing: border-box;
+    resize: vertical;
+    outline: none;
+    font-family: 'Microsoft Yahei', 'PingFang SC', Arial, sans-serif;
+}
+
+.message-item .message-remove {
+    position: absolute;
+    right: 5px;
+    top: 5px;
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    background: transparent;
+    color: #999;
+    cursor: pointer;
+    border: none;
+    font-size: 18px;
+    line-height: 1;
+}
+
+.message-item .message-remove:hover {
+    color: #c00;
+}
+
+#add-message-btn {
+    padding: 6px 12px;
+    font-size: 13px;
+    background: none;
+    border: 1px dashed #bbb;
+    border-radius: 6px;
+    color: #888;
+    cursor: pointer;
+    width: auto;
+}
+
+#add-message-btn:hover {
+    border-color: #000;
+    color: #000;
+    background: none;
+}
+

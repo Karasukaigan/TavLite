@@ -1,0 +1,1068 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title id="page-title" tr>Chat</title>
+    <link rel="icon" type="image/x-icon" href="/img/logo.png">
+    <link rel="stylesheet" href="/css/chat.css">
+    <script src="/js/i18n.js"></script>
+    <script src="/js/toast.js"></script>
+    <script src="/js/marked.min.js"></script>
+</head>
+
+<body>
+    <div class="container">
+        <div class="prompt-info-section">
+            <div class="prompt-info-header" id="prompt-info-toggle">
+                <span tr>System Prompt</span>
+                <svg class="toggle-icon">
+                    <use xlink:href="/img/icons.svg?v=200#icon-toggle"></use>
+                </svg>
+            </div>
+            <div class="prompt-info-content" id="prompt-info-content">
+                <div id="prompt-info-text"></div>
+            </div>
+        </div>
+
+        <div class="navbar">
+            <select id="initial-msg-select" title="Initial Message" tr-title style="display:none;"></select>
+            <select id="role-select" title="System Role Prompt" tr-title>
+                <option value=""></option>
+            </select>
+            <select id="t2i-select" title="T2I Prompt" tr-title>
+                <option value=""></option>
+            </select>
+            <select id="mode-select" title="Control Mode Prompt" tr-title>
+                <option value=""></option>
+            </select>
+            <button id="clear-button" class="stop" title="Clear Context" tr-title>
+                <svg>
+                    <use xlink:href="/img/icons.svg?v=200#icon-clear"></use>
+                </svg>
+            </button>
+            <button id="undo-button" class="stop" title="Undo Last Message" tr-title>
+                <svg>
+                    <use xlink:href="/img/icons.svg?v=200#icon-undo"></use>
+                </svg>
+            </button>
+            <button id="export-button" title="Export Context" tr-title>
+                <svg>
+                    <use xlink:href="/img/icons.svg?v=200#icon-export"></use>
+                </svg>
+            </button>
+            <button id="import-button" title="Import Context" tr-title>
+                <svg>
+                    <use xlink:href="/img/icons.svg?v=200#icon-import"></use>
+                </svg>
+            </button>
+            <input type="file" id="import-file-input" accept=".json" style="display: none;" />
+            <button id="settings-button" title="Settings" tr-title>
+                <svg>
+                    <use xlink:href="/img/icons.svg?v=200#icon-settings"></use>
+                </svg>
+            </button>
+            <button id="home-button" title="Home" tr-title>
+                <svg>
+                    <use xlink:href="/img/icons.svg?v=200#icon-home"></use>
+                </svg>
+            </button>
+            <div id="llm-status" class="llm-status"></div>
+        </div>
+
+        <div class="chat-container">
+            <div class="chat-bubbles" id="chat-bubbles"></div>
+            <div class="input-area">
+                <textarea id="message-input" placeholder=""></textarea>
+                <div class="button-group">
+                    <button id="send-button">
+                        <svg>
+                            <use xlink:href="/img/icons.svg?v=200#icon-send"></use>
+                        </svg>
+                    </button>
+                    <button id="stop-button" class="stop">
+                        <svg>
+                            <use xlink:href="/img/icons.svg?v=200#icon-stop"></use>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+
+<script>
+    const updateLLMStatus = async () => {
+        const statusDiv = document.getElementById('llm-status');
+        if (!statusDiv) return;
+        try {
+            const res = await fetch('/api/llm/test?t=' + Date.now(), { method: 'GET' });
+            const data = await res.json();
+            if (data.success) {
+                statusDiv.textContent = i18n.tr('Connected');
+                statusDiv.className = 'llm-status connected';
+            } else {
+                statusDiv.textContent = i18n.tr('Disconnected');
+                statusDiv.className = 'llm-status disconnected';
+            }
+        } catch (error) {
+            console.error(error);
+            statusDiv.textContent = i18n.tr('Disconnected');
+            statusDiv.className = 'llm-status disconnected';
+        }
+    };
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        try {
+            const authRes = await fetch('/api/auth/check');
+            const authData = await authRes.json();
+            if (!authData.authenticated && authData.password_enabled) {
+                window.location.href = '/login?redirect=/chat' + window.location.search;
+                return;
+            }
+        } catch (e) { }
+        await i18n.init("chat", i18n.getBrowserLanguage());
+
+        setTimeout(() => {
+            updateLLMStatus();
+        }, 2000);
+        setInterval(updateLLMStatus, 600000);
+    });
+</script>
+
+<script>
+    // Global variables
+    var systemRoles = {}; // System roles
+    var controlModes = {}; // Control modes
+    var cards = {}; // Cards
+    var currentCardName = null; // Card selected via URL param
+    var t2iPrompts = {};
+    var userInfo = { username: '', profile: '' };
+    var osrMode = 'disabled';
+
+    var systemPrompt = ""; // System prompt
+    var chatContext = []; // Context
+    var selectedMessageIdx = 0; // 0 = default context, 1+ = messages[i-1], -1 = none
+    var cardMessages = []; // Alternative initial messages array
+
+    var chatStarted = false; // Whether conversation has started
+
+    // System prompt info panel
+    const systemPromptInfoContent = document.getElementById('prompt-info-content');
+    const systemPromptInfoText = document.getElementById('prompt-info-text');
+    const toggleIcon = document.querySelector('.toggle-icon');
+
+    // Navigation bar
+    const roleSelect = document.getElementById('role-select');
+    const initMsgSelect = document.getElementById('initial-msg-select');
+    const modeSelect = document.getElementById('mode-select');
+    const t2iSelect = document.getElementById('t2i-select');
+
+    // Chat container
+    const chatBubbles = document.getElementById('chat-bubbles');
+    const messageInput = document.getElementById('message-input');
+    const sendButton = document.getElementById('send-button');
+    const stopButton = document.getElementById('stop-button');
+
+    // Clear context
+    const clearContext = () => {
+        if (abortController) return;
+        chatContext = [];
+        chatBubbles.innerHTML = '';
+        refreshBubbleIndices();
+    };
+
+    // Update system prompt
+    const updateSystemPrompt = async () => {
+        if (!chatStarted) clearContext();
+        systemPrompt = '';
+        const roleKey = roleSelect.value.trim();
+        const t2iKey = t2iSelect.value.trim();
+        let modeKey = modeSelect.value.trim();
+        if (osrMode === 'disabled') {
+            modeSelect.style.display = 'none';
+            modeKey = '';
+        } else {
+            modeSelect.style.display = '';
+        }
+        const cardKey = currentCardName;
+        if (cardKey && Object.hasOwn(cards, cardKey)) {
+            systemPrompt += `# ${i18n.tr("Scenarios, Characters, and Rules")}\n\n`;
+            if (cards[cardKey] && Object.hasOwn(cards[cardKey], 'system_prompt') && cards[cardKey]['system_prompt']) systemPrompt += String(cards[cardKey]['system_prompt']) + '\n\n';
+            if (!chatStarted && cards[cardKey] && Object.hasOwn(cards[cardKey], 'context') && selectedMessageIdx >= 0) {
+                const contextData = cards[cardKey]['context'];
+                chatContext = Array.isArray(contextData) ? contextData.map(m => ({...m})) : [];
+                if (chatContext.length > 0 && selectedMessageIdx > 0 && cardMessages.length > 0 && selectedMessageIdx - 1 < cardMessages.length) {
+                    chatContext[0].content = cardMessages[selectedMessageIdx - 1];
+                }
+                await renderChatContext(chatContext);
+            }
+        }
+        if (roleKey || t2iKey || modeKey) systemPrompt += `# ${i18n.tr("System Role Settings")}`;
+        if (roleKey && Object.hasOwn(systemRoles, roleKey) && systemRoles[roleKey]) systemPrompt += '\n\n' + String(systemRoles[roleKey]);
+        if (t2iKey || modeKey) systemPrompt += `\n\n## ${i18n.tr("Additional Tasks Required")}`;
+        if (t2iKey && Object.hasOwn(t2iPrompts, t2iKey) && t2iPrompts[t2iKey]) systemPrompt += `\n\n### ${i18n.tr("Write text-to-image prompts")}\n\n` + String(t2iPrompts[t2iKey]);
+        if (modeKey && Object.hasOwn(controlModes, modeKey) && controlModes[modeKey]) systemPrompt += `\n\n### ${i18n.tr("Output control commands")}\n\n` + String(controlModes[modeKey]);
+        if (userInfo.username || userInfo.profile) {
+            systemPrompt += `\n\n# ${i18n.tr("Player Character Settings")}`;
+            if (userInfo.username) {
+                systemPrompt += `\n\n${i18n.tr("Name")}：${userInfo.username}`;
+            }
+            if (userInfo.profile) {
+                systemPrompt += `\n\n${userInfo.profile}`;
+            }
+        }
+        systemPrompt = systemPrompt.trim();
+        systemPromptInfoText.textContent = systemPrompt;
+    }
+
+    // Listen to dropdown changes
+    roleSelect.addEventListener('change', updateSystemPrompt);
+    modeSelect.addEventListener('change', updateSystemPrompt);
+    t2iSelect.addEventListener('change', updateSystemPrompt);
+
+    // Collapse/expand
+    document.getElementById('prompt-info-toggle').addEventListener('click', () => {
+        if (systemPromptInfoContent.style.display === 'block') {
+            systemPromptInfoContent.style.display = 'none';
+            toggleIcon.classList.remove('rotated');
+        } else {
+            systemPromptInfoContent.style.display = 'block';
+            toggleIcon.classList.add('rotated');
+            updateSystemPrompt();
+        }
+    });
+
+    // Fetch JSON data
+    const fetchJson = async url => { try { const r = await fetch(url); if (!r.ok) return {}; const d = await r.json(); return d && typeof d == 'object' && !Array.isArray(d) ? d : {} } catch { return {} } };
+
+    // Populate dropdowns
+    const populateSelect = async (dict, selectElement, selectFirst = true, clear = false) => {
+        if (clear) selectElement.innerHTML = '<option value=""></option>';
+        const fragment = document.createDocumentFragment();
+        const keys = Object.keys(dict);
+        keys.forEach((key, index) => {
+            const option = document.createElement('option');
+            option.value = key;
+            option.textContent = key;
+            if (index === 0 && selectFirst) option.selected = true;
+            fragment.appendChild(option);
+        });
+        selectElement.appendChild(fragment);
+    };
+
+    function populateInitialMsgSelect() {
+        const cardKey = currentCardName;
+        cardMessages = (cardKey && cards[cardKey] && cards[cardKey].messages) ? cards[cardKey].messages : [];
+        initMsgSelect.innerHTML = '';
+        const defaultContent = (cardKey && cards[cardKey] && cards[cardKey].context && cards[cardKey].context[0]) ? cards[cardKey].context[0].content : '';
+        if (cardMessages.length > 0 && defaultContent) {
+            const defaultOpt = document.createElement('option');
+            defaultOpt.value = 0;
+            defaultOpt.textContent = '1';
+            defaultOpt.title = defaultContent.length > 30 ? defaultContent.slice(0, 30) + '...' : defaultContent;
+            initMsgSelect.appendChild(defaultOpt);
+            cardMessages.forEach((msg, i) => {
+                const opt = document.createElement('option');
+                opt.value = i + 1;
+                opt.textContent = String(i + 2);
+                const displayText = msg.length > 30 ? msg.slice(0, 30) + '...' : msg;
+                opt.title = displayText;
+                initMsgSelect.appendChild(opt);
+            });
+            initMsgSelect.style.display = '';
+            initMsgSelect.value = '0';
+            selectedMessageIdx = 0;
+        } else {
+            initMsgSelect.style.display = 'none';
+        }
+    }
+
+    initMsgSelect.addEventListener('change', function () {
+        if (chatStarted) {
+            this.value = String(selectedMessageIdx);
+            return;
+        }
+        selectedMessageIdx = parseInt(this.value);
+        if (selectedMessageIdx === -1) {
+            clearContext();
+        } else {
+            updateSystemPrompt();
+        }
+    });
+
+    document.addEventListener('DOMContentLoaded', async function () {
+        // Load roles, cards, control modes
+        setTimeout(async () => {
+            t = Date.now();
+            systemRoles = await fetchJson('json/prompts/system_roles.json?t=' + t);
+            cards = await fetchJson('/api/cards?t=' + t);
+            controlModes = await fetchJson('json/prompts/control_modes.json?t=' + t);
+            t2iPrompts = await fetchJson('json/prompts/t2i.json?t=' + t);
+            await populateSelect(systemRoles, roleSelect);
+            await populateSelect(controlModes, modeSelect);
+            await populateSelect(t2iPrompts, t2iSelect);
+            const urlParams = new URLSearchParams(window.location.search);
+            const cardParam = urlParams.get('card');
+            if (cardParam && Object.hasOwn(cards, cardParam)) {
+                currentCardName = cardParam;
+                const cardData = await fetchJson('/api/cards/' + encodeURIComponent(cardParam) + '?t=' + Date.now());
+                if (cardData && Object.hasOwn(cardData, cardParam)) {
+                    cards[cardParam] = cardData[cardParam];
+                }
+            }
+            const userRes = await fetch('/api/config/user?t=' + Date.now());
+            const userData = await userRes.json().catch(() => ({}));
+            userInfo = { username: userData.username || '', profile: userData.profile || '' };
+            const osrConfig = await fetchJson('/api/config?t=' + Date.now());
+            osrMode = osrConfig.mode || 'disabled';
+            populateInitialMsgSelect();
+            updateSystemPrompt();
+        }, 500);
+    });
+</script>
+
+<script>
+    // Render context
+    const renderChatContext = async (contextArray) => {
+        chatBubbles.innerHTML = '';
+        for (let i = 0; i < contextArray.length; i++) {
+            const msg = contextArray[i];
+            if (typeof msg === 'object' && ['user', 'assistant'].includes(msg.role) && typeof msg.content === 'string') {
+                const bubble = document.createElement('div');
+                bubble.className = `bubble ${msg.role}`;
+                bubble.dataset.contextIndex = i;
+
+                if (msg.role === 'assistant') {
+                    const originalContent = msg.content;
+                    const scriptDict = extractDict(originalContent);
+                    bubble.innerHTML = marked.parse(processContext(originalContent));
+
+                    if (Object.keys(scriptDict).length > 0) {
+                        const button = document.createElement('button');
+                        button.textContent = JSON.stringify(scriptDict);
+                        button.addEventListener('click', () => sendCustom(scriptDict));
+                        bubble.appendChild(button);
+                    }
+
+                    addEditIcon(bubble);
+                    addT2IButtonIfNeeded(bubble, originalContent, i);
+                } else {
+                    bubble.innerHTML = msg.content;
+                }
+
+                if (msg.t2i && typeof msg.t2i === 'string') {
+                    const imgContainer = document.createElement('div');
+                    imgContainer.className = 't2i-image-container';
+                    const img = document.createElement('img');
+                    img.src = msg.t2i;
+                    imgContainer.appendChild(img);
+                    bubble.appendChild(imgContainer);
+                }
+
+                chatBubbles.appendChild(bubble);
+            }
+        }
+        chatBubbles.scrollTop = chatBubbles.scrollHeight;
+    };
+
+    // Refresh data-context-index for all bubbles to match chatContext indices
+    const refreshBubbleIndices = () => {
+        const bubbles = chatBubbles.querySelectorAll('.bubble');
+        bubbles.forEach((bubble, index) => {
+            bubble.dataset.contextIndex = index;
+        });
+    };
+
+    // Settings
+    document.getElementById('settings-button').addEventListener('click', () => {
+        window.location.href = '/settings';
+    });
+
+    // Home
+    document.getElementById('home-button').addEventListener('click', () => {
+        window.location.href = '/';
+    });
+
+    // Clear context
+    document.getElementById('clear-button').addEventListener('click', () => {
+        if (abortController) return;
+        clearContext();
+        chatStarted = false;
+    });
+
+    // Undo one conversation
+    document.getElementById('undo-button').addEventListener('click', () => {
+        if (abortController) return;
+        const bubbles = chatBubbles.querySelectorAll('.bubble');
+        if (bubbles.length >= 2 && chatContext.length >= 2) {
+            chatBubbles.removeChild(bubbles[bubbles.length - 1]);
+            chatBubbles.removeChild(bubbles[bubbles.length - 2]);
+            chatContext.splice(-2);
+            if (chatContext.length <= 1) chatStarted = false;
+            refreshBubbleIndices();
+        }
+    });
+
+    // Export context
+    document.getElementById('export-button').addEventListener('click', () => {
+        const roleSelectedKey = roleSelect.value;
+        const cardSelectedKey = currentCardName;
+        const modeSelectedKey = modeSelect.value;
+
+        const exportData = {
+            system_roles: roleSelectedKey ? { [roleSelectedKey]: systemRoles[roleSelectedKey] } : {},
+            cards: cardSelectedKey ? { [cardSelectedKey]: cards[cardSelectedKey] } : {},
+            control_modes: modeSelectedKey ? { [modeSelectedKey]: controlModes[modeSelectedKey] } : {},
+            context: chatContext
+        };
+        const dataStr = JSON.stringify(exportData, null, 2);
+        const blob = new Blob([dataStr], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${Date.now()}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    });
+
+    // Import context
+    document.getElementById('import-button').addEventListener('click', () => {
+        document.getElementById('import-file-input').click();
+    });
+    const updateDict = (original, updates) => ({ ...original, ...updates });
+    document.getElementById('import-file-input').addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        try {
+            const text = await file.text();
+            const imported = JSON.parse(text);
+            if (!imported || (typeof imported !== 'object')) throw new Error('Invalid import format: root must be an object');
+
+            // Update prompts
+            if (imported.system_roles && Object.keys(imported.system_roles).length > 0) {
+                systemRoles = updateDict(systemRoles, imported.system_roles);
+                populateSelect(systemRoles, roleSelect, false, true);
+                roleSelect.value = Object.keys(imported.system_roles)[0];
+            }
+            if (imported.cards && Object.keys(imported.cards).length > 0) {
+                cards = updateDict(cards, imported.cards);
+                currentCardName = Object.keys(imported.cards)[0];
+            }
+            if (imported.control_modes && Object.keys(imported.control_modes).length > 0) {
+                controlModes = updateDict(controlModes, imported.control_modes);
+                populateSelect(controlModes, modeSelect, false, true);
+                modeSelect.value = Object.keys(imported.control_modes)[0];
+            }
+            updateSystemPrompt();
+
+            // Load context
+            const externalContext = Array.isArray(imported.context) ? imported.context : [];
+            chatContext = [...externalContext];
+            await renderChatContext(chatContext);
+
+            chatStarted = chatContext.length > 0;
+        } catch (err) {
+            console.error('Import failed:', err);
+        } finally {
+            e.target.value = '';
+        }
+    });
+</script>
+
+<script>
+    let abortController = null; // Used to abort conversation requests
+    let isDeviceMoving = false; // Whether device is moving
+
+    // Send message
+    async function sendMessage(content = null, isRetry = false) {
+        if (abortController) return;
+        const messageContent = (content !== null && typeof content === 'string') ? content : messageInput.value.trim();
+        if (!messageContent) return;
+        chatStarted = true;
+        document.body.focus();
+
+        abortController = new AbortController();
+
+        // Display user message
+        if (!isRetry) {
+            const userBubble = document.createElement('div');
+            userBubble.className = 'bubble user';
+            userBubble.textContent = messageContent;
+            userBubble.dataset.contextIndex = chatContext.length;
+            chatBubbles.appendChild(userBubble);
+            messageInput.value = '';
+            chatContext.push({ role: "user", content: messageContent });
+        }
+
+        try {
+            // Check if already aborted before fetch
+            if (abortController.signal.aborted) {
+                abortController = null;
+                return;
+            }
+
+            const response = await fetch('/api/llm/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    user_message: messageContent,
+                    context_messages: removeT2i(chatContext) || [],
+                    system_prompt: systemPrompt || ""
+                }),
+                signal: abortController.signal,
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`HTTP ${response.status}: ${errorText}`);
+            }
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let assistantBubble = document.createElement('div');
+            assistantBubble.className = 'bubble assistant';
+            chatBubbles.appendChild(assistantBubble);
+
+            let buffer = '';
+            let markdownContent = '';
+            assistantBubble.classList.add('thinking');
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n');
+                buffer = lines.pop();
+                for (const line of lines) {
+                    if (line.startsWith('data: ')) {
+                        try {
+                            const data = JSON.parse(line.slice(6));
+                            if (data.token) {
+                                markdownContent += data.token;
+                                if (data.token.includes("__THINKING_FINISHED__")) {
+                                    assistantBubble.innerHTML = '';
+                                    markdownContent = '';
+                                    assistantBubble.classList.remove('thinking');
+                                    const afterThinking = data.token.split("__THINKING_FINISHED__")[1];
+                                    if (afterThinking) {
+                                        assistantBubble.innerHTML += marked.parse(afterThinking);
+                                        markdownContent += afterThinking;
+                                    }
+                                } else {
+                                    assistantBubble.innerHTML = marked.parse(markdownContent);
+                                }
+                                chatBubbles.scrollTop = chatBubbles.scrollHeight;
+                                assistantBubble.scrollTop = assistantBubble.scrollHeight;
+                            }
+                        } catch (e) {
+                            console.warn('Failed to parse SSE data:', line);
+                        }
+                    }
+                }
+            }
+
+            // Process remaining buffer
+            if (buffer.startsWith('data: ')) {
+                try {
+                    const data = JSON.parse(buffer.slice(6));
+                    if (data.token) {
+                        markdownContent += data.token;
+                        assistantBubble.innerHTML = marked.parse(markdownContent);
+                        chatBubbles.scrollTop = chatBubbles.scrollHeight;
+                    }
+                } catch (e) {
+                    console.warn('Failed to parse remaining SSE data:', buffer);
+                }
+            }
+
+            // Process dictionary
+            const scriptDict = extractDict(markdownContent);
+            assistantBubble.innerHTML = marked.parse(processContext(markdownContent));
+            if (Object.keys(scriptDict).length > 0) {
+                const isSent = await sendCustom(scriptDict);
+                if (isSent) {
+                    const button = document.createElement('button');
+                    button.textContent = JSON.stringify(scriptDict);
+                    button.addEventListener('click', function () { sendCustom(scriptDict); });
+                    assistantBubble.appendChild(button);
+                }
+            }
+
+            assistantBubble.classList.remove('thinking');
+            chatBubbles.scrollTop = chatBubbles.scrollHeight;
+
+            try {
+                if (markdownContent.includes("STOP_TOY")) await fetch('/api/script/stop', { method: 'GET' });
+                if (markdownContent.includes("DARK_THEME")) switchMainCSS('dark');
+                if (markdownContent.includes("LIGHT_THEME")) switchMainCSS();
+            } catch (e) {
+                console.error(e);
+            }
+
+            addEditIcon(assistantBubble);
+            chatContext.push({ role: "assistant", content: markdownContent });
+            const assistantIndex = chatContext.length - 1;
+            assistantBubble.dataset.contextIndex = assistantIndex;
+            addT2IButtonIfNeeded(assistantBubble, markdownContent, assistantIndex);
+        } catch (error) {
+            if (error.name === 'AbortError') {
+                console.info('Conversation aborted by user');
+            } else {
+                console.error('Failed to send message:', error);
+            }
+        } finally {
+            abortController = null;
+        }
+    }
+
+    // Extract dictionary from string
+    const extractDict = (str) => {
+        try {
+            const match = str.match(/\{.*\}/s);
+            if (match) return JSON.parse(match[0]);
+            return {};
+        } catch (error) {
+            return {};
+        }
+    };
+
+    // Validate format
+    const isValidFormat = o => o && typeof o == 'object' && Object.keys(o).length == 5 && ['max', 'min', 'freq', 'decline_ratio', 'loop_count'].every(k => k in o && typeof o[k] == 'number' && !isNaN(o[k]));
+    const isValidActions = a => Array.isArray(a) && a.length > 0 && a.every(i => i && typeof i === 'object' && 'at' in i && 'pos' in i && typeof i.at === 'number' && typeof i.pos === 'number' && isFinite(i.at) && isFinite(i.pos));
+
+    // Remove dictionary from string
+    const removeDict = (str) => {
+        try {
+            return str.replace(/\{.*\}/s, '').trim();
+        } catch (error) {
+            return str;
+        }
+    };
+
+    // Remove marks from string
+    const removeMarks = (
+        str,
+        marks = [
+            'STOP_TOY',
+            'DARK_THEME',
+            'LIGHT_THEME',
+            '```json',
+            '```',
+        ]
+    ) => {
+        let result = str;
+        for (const mark of marks) {
+            result = result.split(mark).join('');
+        }
+        return result;
+    };
+
+    // Process context
+    const processContext = (context) => {
+        return removeMarks(removeDict(removeComfyUITags(context)));
+    };
+
+    // Enable edit mode for chat bubble
+    const enableEditMode = (bubble) => {
+        const bubbleIndex = Array.from(chatBubbles.children).indexOf(bubble);
+        if (bubbleIndex === -1) return;
+
+        const role = bubble.classList.contains('user') ? 'user' : 'assistant';
+        const originalContent = chatContext[bubbleIndex].content;
+
+        const textarea = document.createElement('textarea');
+        textarea.value = originalContent;
+        textarea.className = 'edit-textarea';
+
+        bubble.innerHTML = '';
+        bubble.appendChild(textarea);
+        textarea.focus();
+
+        const saveEdit = () => {
+            const newContent = textarea.value.trim();
+            const currentMsg = chatContext[bubbleIndex];
+            const hadT2I = currentMsg.t2i;
+
+            if (newContent === currentMsg.content) {
+                revertBubble(bubble, role, originalContent, chatContext[bubbleIndex].t2i);
+                return;
+            }
+
+            chatContext[bubbleIndex] = {
+                role: role,
+                content: newContent,
+                ...(hadT2I ? { t2i: hadT2I } : {})
+            };
+
+            if (role === 'assistant') {
+                const scriptDict = extractDict(newContent);
+                bubble.innerHTML = marked.parse(processContext(newContent));
+                if (Object.keys(scriptDict).length > 0) {
+                    const btn = document.createElement('button');
+                    btn.textContent = JSON.stringify(scriptDict);
+                    btn.addEventListener('click', () => sendCustom(scriptDict));
+                    bubble.appendChild(btn);
+                }
+                if (hadT2I) {
+                    const container = document.createElement('div');
+                    container.className = 't2i-image-container';
+                    const img = document.createElement('img');
+                    img.src = hadT2I;
+                    container.appendChild(img);
+                    bubble.appendChild(container);
+                }
+            } else {
+                bubble.innerHTML = newContent;
+                delete chatContext[bubbleIndex].t2i;
+            }
+
+            addEditIcon(bubble);
+            addT2IButtonIfNeeded(bubble, newContent, bubbleIndex);
+            bubble.className = `bubble ${role}`;
+        };
+
+        textarea.addEventListener('blur', saveEdit);
+    };
+
+    const revertBubble = (bubble, role, content, t2i = null) => {
+        if (role === 'assistant') {
+            const scriptDict = extractDict(content);
+            bubble.innerHTML = marked.parse(processContext(content));
+            if (Object.keys(scriptDict).length > 0) {
+                const btn = document.createElement('button');
+                btn.textContent = JSON.stringify(scriptDict);
+                btn.addEventListener('click', () => sendCustom(scriptDict));
+                bubble.appendChild(btn);
+            }
+            if (t2i) {
+                const container = document.createElement('div');
+                container.className = 't2i-image-container';
+                const img = document.createElement('img');
+                img.src = t2i;
+                container.appendChild(img);
+                bubble.appendChild(container);
+            }
+        } else {
+            bubble.innerHTML = content;
+        }
+        addEditIcon(bubble);
+        addT2IButtonIfNeeded(bubble, content, Array.from(chatBubbles.children).indexOf(bubble));
+        bubble.className = `bubble ${role}`;
+    };
+
+    const addEditIcon = (bubble) => {
+        const editIcon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        editIcon.setAttribute('class', 'edit-icon');
+        const useElem = document.createElementNS('http://www.w3.org/2000/svg', 'use');
+        useElem.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', '/img/icons.svg?v=200#icon-edit');
+        editIcon.appendChild(useElem);
+        bubble.appendChild(editIcon);
+
+        if (bubble.classList.contains('assistant')) {
+            const existingRetry = bubble.querySelector('.retry-icon');
+            if (existingRetry) existingRetry.remove();
+
+            const retryIcon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            retryIcon.setAttribute('class', 'retry-icon');
+            const useRetry = document.createElementNS('http://www.w3.org/2000/svg', 'use');
+            useRetry.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', '/img/icons.svg?v=200#icon-refresh');
+            retryIcon.appendChild(useRetry);
+            retryIcon.addEventListener('click', (e) => {
+                e.stopPropagation();
+                retryAssistantFromBubble(bubble);
+            });
+            bubble.insertBefore(retryIcon, editIcon);
+        }
+    };
+
+    const addT2IButtonIfNeeded = (bubble, originalContent, contextIndex) => {
+        const existing = bubble.querySelector('.t2i-button');
+        if (existing) existing.remove();
+
+        const comfyPrompt = extractComfyUIPrompt(originalContent);
+        if (!comfyPrompt) return;
+
+        const t2iButton = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        t2iButton.setAttribute('class', 't2i-button');
+        const useElem = document.createElementNS('http://www.w3.org/2000/svg', 'use');
+        useElem.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', '/img/icons.svg?v=200#icon-image');
+        t2iButton.appendChild(useElem);
+
+        t2iButton.addEventListener('click', async (e) => {
+            e.stopPropagation();
+
+            const existingContainer = bubble.querySelector('.t2i-image-container');
+            if (existingContainer) {
+                existingContainer.remove();
+            }
+
+            const imageUrl = await sendT2I(comfyPrompt);
+            if (!imageUrl) return;
+
+            try {
+                const base64 = await imageUrlToBase64(imageUrl);
+                if (contextIndex !== undefined && chatContext[contextIndex]) chatContext[contextIndex].t2i = base64;
+
+                const container = document.createElement('div');
+                container.className = 't2i-image-container';
+                const img = document.createElement('img');
+                img.src = base64;
+                container.appendChild(img);
+                bubble.appendChild(container);
+            } catch (err) {
+                console.error('Failed to convert image to Base64:', err);
+            }
+        });
+
+        const editIcon = bubble.querySelector('.edit-icon');
+        if (editIcon) {
+            bubble.insertBefore(t2iButton, editIcon);
+        } else {
+            bubble.appendChild(t2iButton);
+        }
+    };
+
+    const retryAssistantFromBubble = (bubble) => {
+        if (abortController) return;
+        const bubbleIndex = Array.from(chatBubbles.children).indexOf(bubble);
+        if (bubbleIndex < 1 || !bubble.classList.contains('assistant')) return;
+
+        const userIndex = bubbleIndex - 1;
+        const userBubble = chatBubbles.children[userIndex];
+        if (!userBubble || !userBubble.classList.contains('user')) return;
+
+        const userMessage = chatContext[userIndex]?.content;
+        if (typeof userMessage !== 'string') return;
+
+        while (chatBubbles.children.length > bubbleIndex) {
+            chatBubbles.removeChild(chatBubbles.lastChild);
+        }
+
+        chatContext.splice(bubbleIndex);
+
+        sendMessage(userMessage, true);
+    };
+
+    async function sendCustom(scriptDict) {
+        if (isValidFormat(scriptDict)) {
+            try {
+                const response = await fetch('/api/script/custom', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        max_pos: scriptDict.max ?? 100,
+                        min_pos: scriptDict.min ?? 0,
+                        freq: scriptDict.freq ?? 1.0,
+                        decline_ratio: scriptDict.decline_ratio ?? 0.5,
+                        loop_count: scriptDict.loop_count ?? 100
+                    })
+                });
+                isDeviceMoving = true;
+                return true;
+            } catch (e) {
+                console.error(e);
+            }
+        } else if (Object.hasOwn(scriptDict, 'custom_actions') && isValidActions(scriptDict.custom_actions)) {
+            try {
+                const response = await fetch('/api/script/custom', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        loop_count: scriptDict.loop_count ?? 100,
+                        custom_actions: scriptDict.custom_actions
+                    })
+                });
+                isDeviceMoving = true;
+                return true;
+            } catch (e) {
+                console.error(e);
+            }
+        }
+        return false;
+    }
+
+    // Send button click event
+    sendButton.addEventListener('click', () => sendMessage());
+    messageInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            if (e.altKey || e.ctrlKey) {
+                // Alt+Enter or Ctrl+Enter for normal line break
+                const start = e.target.selectionStart;
+                const end = e.target.selectionEnd;
+                const value = e.target.value;
+                e.target.value = value.slice(0, start) + '\n' + value.slice(end);
+                e.target.setSelectionRange(start + 1, start + 1);
+                e.preventDefault();
+                messageInput.scrollTop = messageInput.scrollHeight;
+            } else {
+                // Enter to send message
+                e.preventDefault();
+                messageInput.blur();
+                sendMessage();
+            }
+        }
+    });
+
+    const originalHeight = '48px';
+    messageInput.addEventListener('focus', () => {
+        if (messageInput.value.trim() !== '') {
+            messageInput.style.height = '150px';
+            chatBubbles.scrollTop = chatBubbles.scrollHeight;
+        }
+    });
+    messageInput.addEventListener('blur', () => {
+        messageInput.style.height = originalHeight;
+    });
+    messageInput.addEventListener('input', () => {
+        if (document.activeElement === messageInput && messageInput.value.trim() !== '') {
+            messageInput.style.height = '150px';
+            chatBubbles.scrollTop = chatBubbles.scrollHeight;
+        } else if (document.activeElement !== messageInput) {
+            messageInput.style.height = originalHeight;
+        }
+    });
+
+    // Stop button click event
+    stopButton.addEventListener('click', async () => {
+        // First click stops movement
+        if (isDeviceMoving) {
+            try {
+                await fetch('/api/script/stop', { method: 'GET' });
+            } catch (error) { }
+            isDeviceMoving = false;
+            toast.show(i18n.tr('Movement has stopped'), 'success');
+            return;
+        }
+
+        // Second click stops conversation
+        if (abortController) {
+            abortController.abort();
+            toast.show(i18n.tr('Messages have stopped'), 'success');
+            abortController = null;
+            const bubbles = chatBubbles.querySelectorAll('.bubble');
+            const contextLen = chatContext.length;
+            if (bubbles.length > contextLen) chatBubbles.removeChild(bubbles[bubbles.length - 1]);
+            if (contextLen > 0 && chatContext[contextLen - 1].role === 'user') {
+                chatContext.pop();
+                if (chatBubbles.children.length > 0) chatBubbles.removeChild(chatBubbles.lastChild);
+            }
+            chatStarted = chatContext.length > 0;
+            refreshBubbleIndices();
+        }
+    });
+
+    // Switch stylesheet
+    const switchMainCSS = (suffix = '') => {
+        const link = document.querySelector('link[rel="stylesheet"][href^="/css/main"]');
+        if (!link) return;
+        const newHref = suffix
+            ? `/css/chat_${suffix}.css?t=` + Date.now()
+            : `/css/chat.css?t=` + Date.now();
+        if (link.href !== new URL(newHref, window.location.origin).href) link.href = newHref;
+    };
+
+    document.addEventListener('DOMContentLoaded', () => {
+        // Click delegation for edit icons
+        chatBubbles.addEventListener('click', (e) => {
+            if (e.target.closest('.edit-icon')) {
+                const bubble = e.target.closest('.bubble');
+                if (bubble) enableEditMode(bubble);
+            }
+        });
+    });
+</script>
+
+<script>
+    const imageUrlToBase64 = async url => {
+        const blob = await (await fetch(url)).blob();
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+        });
+    };
+
+    const extractComfyUIPrompt = (text) => {
+        const match = text.match(/<comfyui>([\s\S]*?)<\/comfyui>/i);
+        return match ? match[1].trim() : '';
+    };
+
+    const removeComfyUITags = (text) => {
+        return text.replace(/<comfyui>[\s\S]*?<\/comfyui>/gi, '');
+    };
+
+    const removeT2i = (obj) => {
+        if (Array.isArray(obj)) {
+            return obj.map(item => removeT2i(item));
+        } else if (obj !== null && typeof obj === 'object') {
+            const { t2i, ...rest } = obj;
+            const cleaned = {};
+            for (const [key, value] of Object.entries(rest)) {
+                cleaned[key] = removeT2i(value);
+            }
+            return cleaned;
+        } else {
+            return obj;
+        }
+    };
+
+    var imageGenerating = false;
+    const sendT2I = async (prompt) => {
+        if (imageGenerating) {
+            console.warn('T2I is already generating an image');
+            return null;
+        }
+        if (!prompt || typeof prompt !== 'string' || !prompt.trim()) {
+            console.warn('T2I prompt is empty or invalid');
+            return null;
+        }
+        try {
+            imageGenerating = true;
+            toast.show(i18n.tr('Generating image...'), 'success');
+            const response = await fetch('/api/t2i', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ prompt: prompt.trim() })
+            });
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('T2I request failed:', response.status, errorText);
+                return null;
+            }
+            const data = await response.json();
+            if (data && data.image_url) {
+                return data.image_url;
+            } else {
+                console.error('T2I response missing image_url');
+                return null;
+            }
+        } catch (error) {
+            console.error('Error in sendT2I:', error);
+            return null;
+        } finally {
+            imageGenerating = false;
+        }
+    };
+
+    const getComfyUIConfig = async () => {
+        try {
+            const response = await fetch('/api/config/comfyui', {
+                method: 'GET'
+            });
+            if (!response.ok) {
+                console.error('Failed to fetch ComfyUI config:', response.status);
+                return null;
+            }
+            const config = await response.json();
+            return config;
+        } catch (error) {
+            console.error('Error in getComfyUIConfig:', error);
+            return null;
+        }
+    };
+</script>
