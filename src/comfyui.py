@@ -3,17 +3,20 @@ import hashlib
 import json
 import secrets
 import time
+import uuid
 from typing import Any, Dict, Optional
 import aiohttp
 import asyncio
 import os
+from src.logger import get_runtime_logger
+_log = get_runtime_logger("comfyui")
 
 class ComfyUIClient:
     def __init__(
             self, 
             base_url: str = "http://127.0.0.1:8188/", 
             aspect_ratio: str = "portrait",
-            type: str = "zit", 
+            type: str = "", 
             diffusion: str = "z_image_turbo_bf16.safetensors",
             clip: str = "qwen_3_4b.safetensors",
             vae: str = "ae.safetensors"
@@ -22,9 +25,9 @@ class ComfyUIClient:
         self.aspect_ratio = (aspect_ratio or "portrait").lower()
         if self.aspect_ratio not in {"portrait", "landscape", "square"}:
             self.aspect_ratio = "portrait"
-        self.type = (type.strip() or "zit").lower()
-        if self.type not in {"zit", "sdxl"}:
-            self.type = "zit"
+        self.type = type.strip().lower()
+        if self.type not in {"", "zit", "sdxl", "anima", "disabled"}:
+            self.type = ""
         self.diffusion = diffusion.strip()
         self.clip = clip.strip()
         self.vae = vae.strip()
@@ -37,7 +40,7 @@ class ComfyUIClient:
     async def check(self, timeout: int = 10) -> bool:
         if not self.base_url or not self.diffusion:
             return False
-        if self.type in {"zit"}:
+        if self.type in {"zit", "anima"}:
             if not self.clip or not self.vae:
                 return False
         try:
@@ -56,35 +59,48 @@ class ComfyUIClient:
         height: Optional[int] = None,
         timeout_seconds: int = 240,
     ) -> str:
-        if not await self.check():
+        try:
+            if not await self.check():
+                _log.warning("T2I check failed")
+                return ""
+            workflow = self._load_workflow()
+            if not workflow:
+                _log.warning("T2I workflow load failed")
+                return ""
+            self._apply_models(workflow)
+            if prompt:
+                self._apply_prompt(workflow, prompt)
+            if width is None or height is None:
+                ar = (self.aspect_ratio or "portrait").lower()
+                if ar == "landscape":
+                    w, h = 1280, 960
+                elif ar == "square":
+                    w, h = 1024, 1024
+                else:
+                    w, h = 960, 1280
+                width = width or w
+                height = height or h
+            self._apply_size(workflow, width, height)
+            prompt_id = await self._submit_workflow(workflow)
+            if not prompt_id:
+                _log.warning("T2I workflow submission failed")
+                return ""
+            _log.info("T2I prompt submitted: id=%s", prompt_id)
+            history_entry = await self._wait_for_history(prompt_id, timeout_seconds)
+            if not history_entry:
+                _log.warning("T2I history not found for %s", prompt_id)
+                return ""
+            image_info = self._extract_first_image_info(history_entry)
+            if not image_info:
+                _log.warning("T2I no image in result for %s", prompt_id)
+                return ""
+            result = await self._download_image(image_info)
+            if result:
+                _log.info("T2I image downloaded: %s", result)
+            return result
+        except Exception as e:
+            _log.error("T2I run_t2i unexpected error: %s", e, exc_info=True)
             return ""
-        workflow = self._load_workflow()
-        if not workflow:
-            return ""
-        self._apply_models(workflow)
-        if prompt:
-            self._apply_prompt(workflow, prompt)
-        if width is None or height is None:
-            ar = (self.aspect_ratio or "portrait").lower()
-            if ar == "landscape":
-                w, h = 1280, 960
-            elif ar == "square":
-                w, h = 1024, 1024
-            else:
-                w, h = 960, 1280
-            width = width or w
-            height = height or h
-        self._apply_size(workflow, width, height)
-        prompt_id = await self._submit_workflow(workflow)
-        if not prompt_id:
-            return ""
-        history_entry = await self._wait_for_history(prompt_id, timeout_seconds)
-        if not history_entry:
-            return ""
-        image_info = self._extract_first_image_info(history_entry)
-        if not image_info:
-            return ""
-        return await self._download_image(image_info)
 
     def _load_workflow(self) -> Dict[str, Any]:
         try:
@@ -113,17 +129,29 @@ class ComfyUIClient:
         if self.type == "sdxl":
             for node in workflow.values():
                 if node.get("class_type") == "CheckpointLoaderSimple" and self.diffusion:
-                    node.get("inputs", {})["ckpt_name"] = self.diffusion
+                    ckpt = self.diffusion
+                    if not ckpt.endswith('.safetensors'):
+                        ckpt += '.safetensors'
+                    node.get("inputs", {})["ckpt_name"] = ckpt
         else:
             for node in workflow.values():
                 class_type = node.get("class_type")
                 inputs = node.get("inputs", {})
                 if class_type == "UNETLoader" and self.diffusion:
-                    inputs["unet_name"] = self.diffusion
+                    name = self.diffusion
+                    if not name.endswith('.safetensors'):
+                        name += '.safetensors'
+                    inputs["unet_name"] = name
                 if class_type == "CLIPLoader" and self.clip:
-                    inputs["clip_name"] = self.clip
+                    name = self.clip
+                    if not name.endswith('.safetensors'):
+                        name += '.safetensors'
+                    inputs["clip_name"] = name
                 if class_type == "VAELoader" and self.vae:
-                    inputs["vae_name"] = self.vae
+                    name = self.vae
+                    if not name.endswith('.safetensors'):
+                        name += '.safetensors'
+                    inputs["vae_name"] = name
 
     def _apply_prompt(self, workflow: Dict[str, Any], prompt: str) -> None:
         pos_node = self._find_positive_prompt_node(workflow)
@@ -165,14 +193,23 @@ class ComfyUIClient:
             async with aiohttp.ClientSession() as session:
                 async with session.post(
                     f"{self.base_url}/prompt",
-                    json={"prompt": workflow},
-                    timeout=aiohttp.ClientTimeout(total=10),
+                    json={"prompt": workflow, "client_id": str(uuid.uuid4())},
+                    timeout=aiohttp.ClientTimeout(total=30),
                 ) as resp:
                     if resp.status != 200:
+                        error_body = await resp.text()
+                        _log.warning("ComfyUI prompt submission failed: status=%d, body=%s", resp.status, error_body[:500])
                         return None
                     data = await resp.json()
-                    return data.get("prompt_id")
-        except Exception:
+                    prompt_id = data.get("prompt_id")
+                    if not prompt_id:
+                        _log.warning("ComfyUI prompt response missing prompt_id: %s", json.dumps(data)[:500])
+                    return prompt_id
+        except asyncio.TimeoutError:
+            _log.warning("ComfyUI prompt submission timed out")
+            return None
+        except Exception as e:
+            _log.warning("ComfyUI prompt submission error: %s", e)
             return None
 
     async def _wait_for_history(self, prompt_id: str, timeout_seconds: int) -> Optional[Dict[str, Any]]:
@@ -187,10 +224,12 @@ class ComfyUIClient:
                         if resp.status == 200:
                             data = await resp.json()
                             entry = data.get(prompt_id)
-                            if entry and entry.get("outputs"):
+                            if entry and isinstance(entry, dict):
                                 return entry
-                except Exception:
-                    pass
+                except asyncio.TimeoutError:
+                    _log.warning("History poll timed out for %s", prompt_id)
+                except Exception as e:
+                    _log.warning("History poll error for %s: %s", prompt_id, e)
                 await asyncio.sleep(1)
         return None
 

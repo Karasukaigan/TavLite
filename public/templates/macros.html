@@ -1,0 +1,12 @@
+{% macro icon_btn(icon, id='', classes='', title='') %}
+<button{% if id %} id="{{ id }}"{% endif %}{% if classes %} class="{{ classes }}"{% endif %}{% if title %} title="{{ title }}" tr-title{% endif %}>
+    <svg><use xlink:href="/img/icons.svg?v=200#icon-{{ icon }}"></use></svg>
+</button>
+{% endmacro %}
+
+{% macro label_row(label, for_id='', token_id='') %}
+<div class="label-row">
+    <label{% if for_id %} for="{{ for_id }}"{% endif %} tr>{{ label }}</label>
+    {% if token_id %}<span class="token-count" id="{{ token_id }}">0 tokens</span>{% endif %}
+</div>
+{% endmacro %}

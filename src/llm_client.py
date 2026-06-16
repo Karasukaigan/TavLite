@@ -1,7 +1,10 @@
 # ./src/llm_client.py
 import openai
 import threading
+import json
 from typing import List, Dict, Optional, Generator
+from .logger import log_tokens, get_runtime_logger
+_llm_log = get_runtime_logger("llm_client")
 
 class LLMClient:
     def __init__(self, base_url: str, api_key: str, model: str = ""):
@@ -83,6 +86,7 @@ class LLMClient:
         num_predict: int = 32000,
         think: bool = True,
         stop_event: Optional[threading.Event] = None,
+        reasoning_effort: str = "",
     ) -> Generator[str, None, None]:
         """
         Chat conversation
@@ -92,7 +96,9 @@ class LLMClient:
         """
         if not think:
             user_message += "/no_think"
-
+        thinking_type = "disabled"
+        if think:
+            thinking_type = "enabled"
         # Build message list
         messages = []
         if system_prompt:
@@ -120,25 +126,33 @@ class LLMClient:
             return
 
         try:
-            stream = self.client.chat.completions.create(
+            kwargs = dict(
                 model=selected_model,
                 messages=messages,
                 temperature=temperature,
-                max_tokens=num_predict,
+                max_completion_tokens=num_predict,
                 stream=True,
-                stream_options={
-                    "include_usage": True
-                },
+                stream_options={"include_usage": True},
                 extra_body={
                     "think": think,
-                    "enable_thinking": think
+                    "enable_thinking": think,
+                    "thinking": {"type": thinking_type}
                 }
             )
+            if reasoning_effort:
+                kwargs["reasoning_effort"] = reasoning_effort
+            # print("[kwargs]", kwargs)
+            stream = self.client.chat.completions.create(**kwargs)
 
             is_thinking = True
             think_tag = True
+            text = ""
+            text_duplicate_limit = 4000
+            usage = None
 
             for chunk in stream:
+                if hasattr(chunk, 'usage'):
+                    usage = chunk.usage
                 if stop_event and stop_event.is_set():
                     # Try to close the stream to immediately release LLM connection
                     if hasattr(stream, 'close'):
@@ -149,11 +163,18 @@ class LLMClient:
                     break
                 if chunk.choices and len(chunk.choices) > 0:
                     delta = chunk.choices[0].delta
-                    reasoning = getattr(delta, 'reasoning', None)
+                    # print(delta)
+                    reasoning = getattr(delta, 'reasoning_content', None)
+                    if not reasoning:
+                        reasoning = getattr(delta, 'reasoning', None)
                     content = getattr(delta, 'content', None)
 
                     if is_thinking and reasoning:
-                        yield reasoning.replace("\n\n", "\n")
+                        text += reasoning
+                        if text[-text_duplicate_limit:] in text[:-text_duplicate_limit]:
+                            stream.close()
+                            raise Exception("Output is repeating")
+                        yield reasoning
 
                     token = ""
                     if content:
@@ -164,9 +185,20 @@ class LLMClient:
                         if is_thinking and think_tag:
                             token += "__THINKING_FINISHED__"
                             is_thinking = False
-                        token += content.replace("\n\n", "\n")
+                            text = ""
+                        token += content
+                        text += token
+                        if text[-text_duplicate_limit:] in text[:-text_duplicate_limit]:
+                            stream.close()
+                            raise Exception("Output is repeating")
                         yield token
-
+            if usage and hasattr(usage, 'prompt_tokens') and hasattr(usage, 'completion_tokens') and hasattr(usage, 'total_tokens'):
+                log_tokens(selected_model, usage)
+                usage_data = {'model': selected_model}
+                usage_data['prompt_tokens'] = usage.prompt_tokens
+                usage_data['completion_tokens'] = usage.completion_tokens
+                usage_data['total_tokens'] = usage.total_tokens
+                yield f"__USAGE__{json.dumps(usage_data)}"
         except openai.APIConnectionError as e:
             yield f"__ERROR__ Connection failed: {e}"
         except openai.AuthenticationError as e:

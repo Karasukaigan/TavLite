@@ -1,0 +1,343 @@
+{% extends "base.html" %}
+{% from "macros.html" import icon_btn, label_row %}
+{% block content %}
+<div class="tabs">
+    <button class="tab-button" data-tab="qr" tr>QR</button>
+    <button class="tab-button" data-tab="llm" tr>LLM</button>
+    <button class="tab-button" data-tab="comfyui" tr>T2I</button>
+    <button class="tab-button" data-tab="user" tr>USER</button>
+    <button class="tab-button" data-tab="system" tr>SYSTEM</button>
+    <button class="tab-button" data-tab="cards" tr>CARDS</button>
+    <button class="tab-button" data-tab="osr" tr>OSR</button>
+</div>
+
+<div class="tab-content" id="llm-tab">
+    <div class="container" style="margin-bottom: 10px;">
+        <form id="llmConfigForm">
+            <div class="form-group">
+                <div class="label-with-tooltip">
+                    <label for="baseUrl" tr>Base URL</label>
+                    <span class="tooltip-trigger" data-tooltip="Use OpenAI-compatible API.">
+                        <svg><use xlink:href="/img/icons.svg?v=200#icon-question"></use></svg>
+                    </span>
+                </div>
+                <input type="text" id="baseUrl" name="baseUrl" placeholder="http://124.0.0.1:11434/v1">
+            </div>
+            <div class="form-group">
+                <label for="apiKey" tr>API Key</label>
+                <input type="password" id="apiKey" name="apiKey" placeholder="sk-">
+            </div>
+            <div class="form-group">
+                <label for="model" tr>Model</label>
+                <input type="text" id="model" name="model" placeholder="gemma4:26b">
+            </div>
+            <div class="form-group advanced">
+                <div class="label-with-tooltip">
+                    <label for="temperature" tr>Temperature</label>
+                    <span class="tooltip-trigger" data-tooltip="Range 0.0~2.0, some APIs only support 0.0~1.0.">
+                        <svg><use xlink:href="/img/icons.svg?v=200#icon-question"></use></svg>
+                    </span>
+                </div>
+                <input type="number" id="temperature" name="temperature" min="0" max="2.0" step="0.1" value="1.0">
+            </div>
+            <div class="form-group advanced">
+                <div class="label-with-tooltip">
+                    <label for="thinkingEffort" tr>Thinking Effort</label>
+                    <span class="tooltip-trigger" data-tooltip="Some APIs only support specific values.">
+                        <svg><use xlink:href="/img/icons.svg?v=200#icon-question"></use></svg>
+                    </span>
+                </div>
+                <select id="thinkingEffort" name="thinkingEffort">
+                    <option value=""></option>
+                    <option value="xhigh">xhigh</option>
+                    <option value="max">max</option>
+                    <option value="high">high</option>
+                    <option value="medium" selected>medium</option>
+                    <option value="low">low</option>
+                    <option value="minimal">minimal</option>
+                    <option value="none">none</option>
+                </select>
+            </div>
+            <button type="submit" tr>Save Settings</button>
+        </form>
+    </div>
+    <a href="#" id="clear-chat-cache" style="display: block; text-align: center;" tr>Clear Chat Cache</a>
+</div>
+
+<div class="tab-content" id="comfyui-tab">
+    <div class="container" style="margin-bottom: 10px;">
+        <form id="comfyuiConfigForm">
+            <div class="form-group">
+                <label for="comfyTypeSelect" tr>Model Type</label>
+                <select id="comfyTypeSelect" name="comfyType">
+                    <option value="disabled" tr>Disabled</option>
+                    <option value="sdxl">SDXL / Illustrious</option>
+                    <option value="anima">Anima</option>
+                    <option value="zit">ZIT</option>
+                </select>
+            </div>
+            <div class="form-group comfyui-url-group">
+                <div class="label-with-tooltip">
+                    <label for="comfyUrl" tr>ComfyUI URL</label>
+                    <span class="tooltip-trigger" data-tooltip="ComfyUI Portable is not recommended, deploy from source instead.">
+                        <svg><use xlink:href="/img/icons.svg?v=200#icon-question"></use></svg>
+                    </span>
+                </div>
+                <input type="text" id="comfyUrl" name="url" placeholder="http://127.0.0.1:8188">
+            </div>
+            <div class="form-group aspect-ratio-group">
+                <label for="aspectRatioSelect" tr>Image Aspect Ratio</label>
+                <select id="aspectRatioSelect" name="aspectRatio">
+                    <option value="portrait" tr>Portrait</option>
+                    <option value="landscape" tr>Landscape</option>
+                    <option value="square" tr>Square</option>
+                </select>
+            </div>
+            <div class="form-group model-group">
+                <label for="comfyDiffusion" tr>Diffusion Model</label>
+                <input type="text" id="comfyDiffusion" name="diffusion" placeholder="z_image_turbo_bf16.safetensors">
+            </div>
+            <div class="form-group clip-vae-group">
+                <label for="comfyClip" tr>CLIP Model</label>
+                <input type="text" id="comfyClip" name="clip" placeholder="qwen_3_4b.safetensors">
+            </div>
+            <div class="form-group clip-vae-group">
+                <label for="comfyVae" tr>VAE Model</label>
+                <input type="text" id="comfyVae" name="vae" placeholder="ae.safetensors">
+            </div>
+            <button type="submit" tr>Save Settings</button>
+        </form>
+    </div>
+    <a href="#" id="clear-t2i-cache" style="display: block; text-align: center;" tr>Clear Image Cache</a>
+</div>
+
+<div class="tab-content" id="cards-tab" style="width: 100%;">
+    <div class="container" style="height: calc(100vh - 180px);">
+        <div class="cards-tab-header">
+            <input type="text" id="card-search-input" placeholder="Search" style="flex: 1;" tr-input>
+            <input type="text" id="card-name-input" placeholder="New" style="flex: 1;" tr-input>
+            {{ icon_btn('add', id='new-card-button', classes='', title='New') }}
+            {{ icon_btn('import', id='import-card-button', classes='', title='Import') }}
+        </div>
+        <div id="cards-list"></div>
+    </div>
+    <div id="card-edit-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-dialog">
+            {{ icon_btn('close', id='modal-close', classes='modal-close-btn') }}
+            <div class="modal-header">
+                <span id="modal-card-title" class="modal-title"></span>
+            </div>
+            <div class="modal-body" id="modal-body">
+                <div class="form-group">
+                    <label tr>Concept Art</label>
+                    <div class="concept-art-area">
+                        <div class="concept-art-preview" style="display: none;">
+                            <img class="concept-art-image" src="">
+                            {{ icon_btn('clear', classes='concept-art-remove') }}
+                        </div>
+                        <div class="concept-art-upload">
+                            <span tr>Click to upload or drop image</span>
+                            <input type="file" accept="image/*" class="concept-art-input" style="display: none;">
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    {{ label_row('Character Description', for_id='modal-card-prompt', token_id='prompt-token-count') }}
+                    <textarea id="modal-card-prompt" rows="3"></textarea>
+                </div>
+                <div class="form-group advanced" style="display:none;">
+                    <label tr>Welcome Page</label>
+                    <textarea id="modal-card-html" placeholder="Enter complete HTML with CSS and JS. Self-contained, iframe-friendly." tr-input></textarea>
+                </div>
+                <div class="form-group">
+                    {{ label_row('First Message', for_id='modal-card-context', token_id='context-token-count') }}
+                    <textarea id="modal-card-context" rows="3"></textarea>
+                </div>
+                <div class="form-group">
+                    <label tr>Alternative Greetings</label>
+                    <div id="messages-list" style="display: none;"></div>
+                    <button id="add-message-btn" type="button" tr>+ Add Message</button>
+                </div>
+            </div>
+            <button id="modal-card-save" tr>Save Settings</button>
+        </div>
+    </div>
+</div>
+
+<div class="tab-content" id="osr-tab">
+    <div class="container" style="margin-bottom: 10px; margin-top: 30px;">
+        <form id="settingsForm">
+            <div class="form-group">
+                <label for="modeSelect" tr>Work Mode</label>
+                <select id="modeSelect" name="mode">
+                    <option value="disabled" tr>Disabled</option>
+                    <option value="udp">UDP</option>
+                    <option value="serial">USB</option>
+                    <option value="intiface">Intiface</option>
+                    <option value="handy" tr>Handy (Beta)</option>
+                </select>
+            </div>
+            <div class="form-group" id="motion-range-group">
+                <div class="label-with-tooltip">
+                    <label for="motionRange" tr>Motion Range</label>
+                    <span class="tooltip-trigger" data-tooltip="Some devices or software may require 0-1000.">
+                        <svg><use xlink:href="/img/icons.svg?v=200#icon-question"></use></svg>
+                    </span>
+                </div>
+                <select id="motionRange" name="motionRange">
+                    <option value="9999">0-9999</option>
+                    <option value="1000">0-1000</option>
+                </select>
+            </div>
+            <div class="form-group" id="udp-group">
+                <label for="udpUrl" tr>UDP Address</label>
+                <input type="text" id="udpUrl" name="udpUrl" placeholder="http://192.168.4.1:8000">
+            </div>
+            <div class="form-group" id="serial-group">
+                <label for="serialDevice" tr>Serial Device</label>
+                <select id="serialDevice" name="serialDevice">
+                    <option value="" tr>Please select a serial device</option>
+                </select>
+            </div>
+            <div class="form-group" id="intiface-group">
+                <div style="display:flex; align-items:center; gap:6px;">
+                    <label tr>WebSocket Address</label>
+                    <span id="intiface-status" class="status-dot status-disconnected" title="Disconnected" tr-title>●</span>
+                </div>
+                <div class="input-row">
+                    <input type="text" id="intifaceWsUrl" placeholder="ws://127.0.0.1:12345" style="flex:1;" tr-input>
+                    <button type="button" id="intifaceConnectBtn" class="btn-narrow">
+                        <span class="btn-spinner" style="display:none;"></span>
+                        <span class="btn-text" tr>Connect</span>
+                    </button>
+                </div>
+            </div>
+            <div class="form-group" id="intiface-device-group" style="display: none;">
+                <label for="intifaceDevice" tr>Select Device</label>
+                <select id="intifaceDevice">
+                    <option value="" tr>No devices available</option>
+                </select>
+            </div>
+            <div class="form-group" id="handy-group">
+                <div style="display:flex; align-items:center; gap:6px;">
+                    <label tr>Connection Key</label>
+                    <span id="handy-status" class="status-dot status-disconnected" title="Disconnected" tr-title>●</span>
+                </div>
+                <div class="input-row">
+                    <input type="password" id="handyConnectionKey" placeholder="" style="flex:1;">
+                    <button type="button" id="handyTestBtn" class="btn-narrow">
+                        <span class="btn-text" tr>Test</span>
+                    </button>
+                </div>
+                <div style="margin-top: 6px;">
+                    <label for="handyApiVersion" tr>API Version</label>
+                    <select id="handyApiVersion">
+                        <option value="v3">v3</option>
+                        <option value="v2">v2</option>
+                    </select>
+                </div>
+                <div class="input-row" style="margin-top: 6px; gap: 6px;">
+                    <div style="flex: 1;">
+                        <label for="handyMinDepth" tr>Min Depth</label>
+                        <input type="number" id="handyMinDepth" min="0" max="100" value="0" style="width: 100%;">
+                    </div>
+                    <div style="flex: 1;">
+                        <label for="handyMaxDepth" tr>Max Depth</label>
+                        <input type="number" id="handyMaxDepth" min="0" max="100" value="100" style="width: 100%;">
+                    </div>
+                </div>
+            </div>
+            <div class="form-group" id="joystick-group">
+                <div class="radio-option">
+                    <input type="checkbox" id="joystickControl" name="joystickControl" disabled>
+                    <label for="joystickControl" tr>Joystick Control (for testing)</label>
+                </div>
+            </div>
+            <button type="submit" tr>Save Settings</button>
+            <div class="form-group" id="test-params-group">
+                <div class="label-with-tooltip">
+                    <label tr>Test Parameters</label>
+                    <span class="tooltip-trigger" data-tooltip="Save before testing.">
+                        <svg><use xlink:href="/img/icons.svg?v=200#icon-question"></use></svg>
+                    </span>
+                </div>
+                <div class="input-row">
+                    <input type="text" id="test-params" value='{"loop_count": 2, "custom_actions": [{"at": 0, "pos": 100}, {"at": 2000, "pos": 0}, {"at": 4000, "pos": 100}]}'>
+                    <button type="button" id="test-play-btn" class="btn-narrow" tr>Test</button>
+                </div>
+            </div>
+        </form>
+    </div>
+    <a href="#" id="view-api" style="display: block; text-align: center;" tr>View API</a>
+</div>
+
+<div class="tab-content" id="qr-tab" style="min-width: auto; width: auto;" title="Scan to browse character cards" tr-title>
+    <div class="container" style="margin-bottom: 10px; cursor: pointer;" onclick="window.location.href='/'">
+        <div id="qr-code"></div>
+        <div id="qr-url" style="user-select: text;"></div>
+    </div>
+    <a href="/" style="display: block; text-align: center;" tr>Go to Chat</a>
+</div>
+
+<div class="tab-content" id="user-tab">
+    <div class="container">
+        <form id="userConfigForm">
+            <div class="form-group">
+                <div class="label-with-tooltip">
+                    <label for="username" tr>Username</label>
+                    <span class="tooltip-trigger" data-tooltip="The username will be added to the system prompt as the player's name.">
+                        <svg><use xlink:href="/img/icons.svg?v=200#icon-question"></use></svg>
+                    </span>
+                </div>
+                <input type="text" id="username" name="username" placeholder="">
+            </div>
+            <div class="form-group">
+                {{ label_row('Profile', for_id='userProfile', token_id='profile-token-count') }}
+                <textarea id="userProfile" name="userProfile" rows="4" placeholder=""></textarea>
+            </div>
+            <button type="submit" tr>Save Settings</button>
+        </form>
+    </div>
+</div>
+
+<div class="tab-content" id="system-tab">
+    <div class="container">
+        <form id="systemConfigForm">
+            <div class="form-group">
+                <label for="languageSelect" tr>Language</label>
+                <select id="languageSelect">
+                    <option value="browser" tr>Follow browser</option>
+                    <option value="en">English</option>
+                    <option value="zh">中文</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="advancedModeSelect" tr>Advanced Mode</label>
+                <select id="advancedModeSelect">
+                    <option value="false" tr>Disabled</option>
+                    <option value="true" tr>Enabled</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="startupPageSelect" tr>Open on Startup</label>
+                <select id="startupPageSelect">
+                    <option value="llm">LLM</option>
+                    <option value="qr">QR</option>
+                    <option value="home" tr>Home</option>
+                    <option value="disabled" tr>Disabled</option>
+                </select>
+            </div>
+            <button type="submit" tr>Save Settings</button>
+        </form>
+    </div>
+</div>
+
+<div class="tab-content" id="api-tab" style="width: 100%;">
+    <div class="container">
+        <div id="api-doc-content"></div>
+    </div>
+</div>
+{% block foot_scripts %}
+<script src="/js/card-edit-modal.js"></script>
+{% endblock %}
+{% endblock %}

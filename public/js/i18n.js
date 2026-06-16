@@ -103,11 +103,15 @@
         /**
          * Initialize i18n
          */
-        async init(prefix, lang = "en") {
+        async init(lang = "en") {
+            const saved = localStorage.getItem('language');
+            if (saved && saved !== 'browser') {
+                lang = saved;
+            }
             if (lang !== "en") {
                 try {
                     this.setTr();
-                    await this.load(`/i18n/${prefix}_${lang}.json?t=${Date.now()}`);
+                    await this.load(`/json/i18n/${lang}.json?t=${Date.now()}`);
                     this.apply();
                 } catch (e) {
                     console.error(e);

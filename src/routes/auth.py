@@ -1,26 +1,21 @@
-from fastapi import APIRouter, Body, HTTPException, Request
+from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 import secrets
 from src import state
+from src.logger import get_runtime_logger
+_log = get_runtime_logger("auth")
 
 router = APIRouter(tags=["auth"])
 
 
 @router.post("/api/auth/login")
-async def auth_login(password: str = Body(..., embed=True)):
-    if not state.password_enabled:
-        token = secrets.token_hex(32)
-        state.auth_tokens.add(token)
-        resp = JSONResponse({"success": True})
-        resp.set_cookie(key="auth_token", value=token, httponly=True)
-        return resp
-    if password == state.user_password:
-        token = secrets.token_hex(32)
-        state.auth_tokens.add(token)
-        resp = JSONResponse({"success": True})
-        resp.set_cookie(key="auth_token", value=token, httponly=True)
-        return resp
-    raise HTTPException(status_code=401, detail="Invalid password")
+async def auth_login(request: Request = None):
+    token = secrets.token_hex(32)
+    state.auth_tokens.add(token)
+    _log.info("Login")
+    resp = JSONResponse({"success": True})
+    resp.set_cookie(key="auth_token", value=token, httponly=True)
+    return resp
 
 
 @router.post("/api/auth/logout")
@@ -35,8 +30,7 @@ async def auth_logout(request: Request):
 
 @router.get("/api/auth/check")
 async def auth_check(request: Request):
-    token = request.cookies.get("auth_token")
     return {
-        "authenticated": token in state.auth_tokens if state.password_enabled else True,
-        "password_enabled": state.password_enabled
+        "authenticated": True,
+        "password_enabled": False
     }

@@ -4,6 +4,8 @@ import time
 import inputs
 import serial
 import importlib
+from src.logger import get_runtime_logger
+_log = get_runtime_logger("joystick")
 
 class JoystickController:
     def __init__(self):
@@ -22,10 +24,11 @@ class JoystickController:
         if not self._detect_joystick():
             return {"message": "No joystick detected"}
         
-        print(f"Detected {len(inputs.devices.gamepads)} joystick(s)")
+        _log.info("Detected %d joystick(s)", len(inputs.devices.gamepads))
         self.joystick_running = True
         self.joystick_thread = threading.Thread(target=self._joystick_loop, daemon=True)
         self.joystick_thread.start()
+        _log.info("Joystick control started")
         return {"message": "Joystick control started"}
     
     def _detect_joystick(self):
@@ -55,6 +58,7 @@ class JoystickController:
     def stop_joystick(self):
         """Stop joystick control"""
         self.joystick_running = False
+        _log.info("Joystick control stopped")
         return {"message": "Joystick control stopped"}
 
     def joystick_status(self):

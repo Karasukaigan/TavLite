@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% from "macros.html" import icon_btn %}
+{% block head_inline %}
+<script>(function(){var t=localStorage.getItem('chat-theme');if(t)document.documentElement.dataset.theme=t;})();</script>
+{% endblock %}
+{% block content %}
+<div class="container">
+    <div class="prompt-info-section" style="display:none">
+        <div class="prompt-info-header" id="prompt-info-toggle">
+            <span tr>System Prompt</span>
+            <svg class="toggle-icon">
+                <use xlink:href="/img/icons.svg?v=200#icon-toggle"></use>
+            </svg>
+        </div>
+        <div class="prompt-info-content" id="prompt-info-content">
+            <div id="prompt-info-text"></div>
+        </div>
+    </div>
+
+    <div class="navbar">
+        <select id="initial-msg-select" title="Initial Message" tr-title style="display:none;"></select>
+        <select id="role-select" title="System Role Prompt" tr-title>
+            <option value=""></option>
+        </select>
+        <select id="t2i-select" title="T2I Prompt" tr-title>
+            <option value=""></option>
+        </select>
+        <select id="mode-select" title="Control Mode Prompt" tr-title>
+            <option value=""></option>
+        </select>
+        {{ icon_btn('clear', id='clear-button', classes='stop', title='Clear Context') }}
+        {{ icon_btn('undo', id='undo-button', classes='stop', title='Undo Last Message') }}
+        {{ icon_btn('save', id='save-button', title='Save Cache') }}
+        {{ icon_btn('export', id='export-button', title='Export Context') }}
+        {{ icon_btn('import', id='import-button', title='Import Context') }}
+        <input type="file" id="import-file-input" accept=".json" style="display: none;">
+        {{ icon_btn('settings', id='settings-button', title='Settings') }}
+        {{ icon_btn('home', id='home-button', title='Home') }}
+        {{ icon_btn('window', id='welcome-toggle-btn', title='Welcome Page') }}
+        <div id="llm-status" class="llm-status"></div>
+    </div>
+
+    <div class="welcome-container" id="welcome-container" style="display:none;">
+        <button id="welcome-close-btn" class="welcome-close-btn">
+            <svg><use xlink:href="/img/icons.svg?v=200#icon-close"></use></svg>
+        </button>
+        <iframe id="welcome-frame" class="welcome-frame"></iframe>
+    </div>
+    <div class="chat-container">
+        <div class="chat-bubbles" id="chat-bubbles"></div>
+        <div class="input-area">
+            <textarea id="message-input" placeholder=""></textarea>
+            <div class="button-group">
+                {{ icon_btn('send', id='send-button') }}
+                {{ icon_btn('stop', id='stop-button', classes='stop') }}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

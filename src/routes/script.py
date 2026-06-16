@@ -1,28 +1,34 @@
+import asyncio
 from fastapi import APIRouter, Query, Body, HTTPException
 from dotenv import set_key
 from src import state
+from src.logger import get_runtime_logger
+_log = get_runtime_logger("script")
 
 router = APIRouter(tags=["script"])
 
 
 @router.post("/api/script")
 async def load(script_data: dict):
-    state.joystick_controller.stop_joystick()
-    state.player.stop()
-    result = state.player.load_script(script_data)
+    await asyncio.to_thread(state.joystick_controller.stop_joystick)
+    await asyncio.to_thread(state.player.stop)
+    result = await asyncio.to_thread(state.player.load_script, script_data)
+    _log.info("Script loaded (%d actions)", len(script_data.get("actions", [])))
     return result
 
 
 @router.get("/api/script/play")
 async def play(at: int = Query(0, description="Start time, unit: milliseconds")):
-    state.joystick_controller.stop_joystick()
-    result = state.player.play(at)
+    await asyncio.to_thread(state.joystick_controller.stop_joystick)
+    result = await asyncio.to_thread(state.player.play, at)
+    _log.info("Script play at=%d", at)
     return result
 
 
 @router.get("/api/script/stop")
 async def stop():
-    result = state.player.stop()
+    result = await asyncio.to_thread(state.player.stop)
+    _log.info("Script stopped")
     return result
 
 
@@ -39,7 +45,8 @@ async def custom_play(
     custom_actions: list = Body(None)
 ):
     try:
-        state.player.custom_play(
+        await asyncio.to_thread(
+            state.player.custom_play,
             range=range,
             inverted=inverted,
             max_pos=max_pos,
@@ -61,7 +68,7 @@ async def custom_play(
 async def adjust_offset(ms: int = Query(..., description="Offset adjustment value, unit: milliseconds")):
     old_offset = state.player.offset_value
     state.player.offset_value += int(ms)
-    set_key(".env", "OFFSET", str(state.player.offset_value))
+    await asyncio.to_thread(set_key, ".env", "OFFSET", str(state.player.offset_value))
     return {
         "message": "Offset adjusted successfully",
         "old_offset": old_offset,

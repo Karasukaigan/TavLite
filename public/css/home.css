@@ -1,35 +1,50 @@
 body {
-    font-family: 'Microsoft Yahei', 'PingFang SC', Arial, sans-serif;
-    margin: 0;
-    padding: 0;
     background-color: #fff;
-    user-select: none;
 }
 
 button {
-    display: flex;
-    align-items: center;
-    justify-content: center;
     background-color: #000;
     color: #fff;
     padding: 10px 20px;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
     font-size: 16px;
     transition: background-color 0.1s ease;
-    outline: none;
 }
 
 button:hover {
     background-color: #282828;
 }
 
-button svg {
-    width: 16px;
-    min-width: 16px;
-    height: 16px;
-    fill: currentColor;
+.modal-dialog {
+    max-width: 800px;
+    max-height: 80vh;
+    padding: 24px;
+}
+
+@media (max-width: 700px) {
+    .modal-dialog {
+        max-height: 70vh;
+    }
+}
+
+.modal-close-btn {
+    right: 12px;
+    top: 12px;
+}
+
+.modal-header {
+    align-items: flex-start;
+    max-width: calc(100% - 36px);
+    flex-direction: column;
+}
+
+.modal-header-info {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+}
+
+.modal-body {
+    max-height: calc(100% - 102px);
 }
 
 .home-page {
@@ -72,13 +87,9 @@ button svg {
     max-width: 360px;
     min-width: 120px;
     margin-left: auto;
-    padding: 8px 12px;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    font-size: 14px;
-    outline: none;
-    box-sizing: border-box;
-    font-family: inherit;
+    padding: 8px 12px !important;
+    font-size: 14px !important;
+    height: 36px;
 }
 
 .home-search-input:focus {
@@ -131,6 +142,7 @@ button svg {
     background-color: #fff;
     display: flex;
     flex-direction: column;
+    position: relative;
 }
 
 .home-card:hover {
@@ -173,6 +185,98 @@ button svg {
     color: #000;
 }
 
+.home-card-info-btn {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    background-color: rgba(0,0,0,0.45);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+}
+
+@media (max-width: 1400px) { 
+    .home-card-info-btn {
+        opacity: 0.1;
+    }
+}
+
+.home-card:hover .home-card-info-btn {
+    opacity: 1;
+}
+
+.home-card-info-btn:hover {
+    background-color: rgba(0,0,0,0.7);
+}
+
+.home-card-info-btn svg {
+    width: 16px;
+    height: 16px;
+    fill: currentColor;
+}
+
+.info-modal-body {
+    overflow-y: auto;
+    user-select: text;
+    line-height: 1.7;
+    font-size: 15px;
+    padding: 0 4px;
+    overflow-wrap: break-word;
+    word-break: break-word;
+}
+
+.info-modal-body p {
+    margin: 0 0 12px 0;
+}
+
+.info-modal-body pre {
+    background: #f5f5f5;
+    padding: 12px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 14px;
+    word-break: normal;
+    overflow-wrap: normal;
+}
+
+.info-modal-body code {
+    font-size: 14px;
+}
+
+.modal-start-chat-btn {
+    width: 100%;
+    margin-top: 16px;
+    padding: 10px;
+    font-size: 16px;
+    border: none;
+    border-radius: 8px;
+    background-color: #000;
+    color: #fff;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-start-chat-btn:hover {
+    background-color: #282828;
+}
+
+.info-modal-body img {
+    max-width: 100%;
+    border-radius: 8px;
+}
+
 .home-empty {
     display: flex;
     flex-direction: column;
@@ -194,31 +298,39 @@ button svg {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 12px;
+    gap: 6px;
     padding: 16px 20px;
     width: calc(100% - 40px);
     max-width: 1200px;
     box-sizing: border-box;
 }
 
-.pagination button {
-    padding: 6px;
+.pagination .page-btn {
+    padding: 0;
     font-size: 14px;
     width: 30px;
     height: 30px;
 }
 
-.pagination button:disabled {
-    opacity: 0.3;
+.pagination .page-btn:disabled {
+    background-color: #fff;
+    color: #ddd;
+    border: 1px solid #ddd;
     cursor: default;
 }
 
-.pagination button:disabled:hover {
-    background-color: #000;
+.pagination .page-btn.active {
+    background-color: #fff;
+    color: #000;
+    border: 1px solid #000;
+    line-height: 26px;
 }
 
-.page-info {
-    font-size: 14px;
-    color: #555;
-    user-select: none;
+#info-tags-container {
+    margin-bottom: 12px;
+}
+
+#info-tags-container .tag-item {
+    border-radius: 10px;
+    font-size: 12px;
 }

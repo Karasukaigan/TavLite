@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% from "macros.html" import icon_btn %}
+{% block content %}
+<div class="home-page">
+    <div class="home-header">
+        <h1>TavLite</h1>
+        <h2>Free</h2>
+        <input type="text" id="search-input" class="home-search-input" placeholder="Search" tr-input>
+        {{ icon_btn('settings', id='settings-button', title='Settings') }}
+    </div>
+    <div class="card-grid" id="card-grid"></div>
+    <div class="pagination" id="pagination"></div>
+</div>
+
+<div id="card-info-modal" class="modal-overlay" style="display: none;">
+    <div class="modal-dialog">
+        {{ icon_btn('close', id='info-modal-close', classes='modal-close-btn') }}
+        <div class="modal-header">
+            <div class="modal-header-info">
+                <span id="info-modal-title" class="modal-title"></span>
+            </div>
+        </div>
+        <div class="modal-body info-modal-body" id="info-modal-body">
+            <div class="tags-container" id="info-tags-container"></div>
+        </div>
+        <button id="info-modal-start-chat" class="modal-start-chat-btn" tr>Start Chat</button>
+    </div>
+</div>
+{% endblock %}

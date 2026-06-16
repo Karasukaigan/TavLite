@@ -1,34 +1,33 @@
-from fastapi import APIRouter
-from fastapi.responses import FileResponse
+from fastapi import APIRouter, Request
+from fastapi.templating import Jinja2Templates
 import os
 from src import state
 
 router = APIRouter(tags=["pages"])
-
-
-@router.get("/login")
-async def read_login():
-    login_path = os.path.join(state.public_dir, "html", "login.html")
-    if os.path.exists(login_path):
-        return FileResponse(login_path)
+templates = Jinja2Templates(directory=os.path.join(state.public_dir, "templates"))
 
 
 @router.get("/")
-async def read_index():
-    index_path = os.path.join(state.public_dir, "html", "index.html")
-    if os.path.exists(index_path):
-        return FileResponse(index_path)
+async def read_index(request: Request):
+    return templates.TemplateResponse(request, "index.html", {
+        "title": "TavLite", "css": "home.css", "js": "index.js", "marked": True
+    })
 
 
 @router.get("/chat")
-async def read_chat():
-    chat_path = os.path.join(state.public_dir, "html", "chat.html")
-    if os.path.exists(chat_path):
-        return FileResponse(chat_path)
+async def read_chat(request: Request):
+    return templates.TemplateResponse(request, "chat.html", {
+        "title": "Chat", "css": "chat.css",
+        "extra_css": "chat-theme.css", "js": "chat.js", "marked": True
+    })
 
 
 @router.get("/settings")
-async def read_settings():
-    index_path = os.path.join(state.public_dir, "html", "settings.html")
-    if os.path.exists(index_path):
-        return FileResponse(index_path)
+async def read_settings(request: Request):
+    return templates.TemplateResponse(request, "settings.html", {
+        "title": "Settings", "css": "settings.css",
+        "js": "settings.js", "marked": True, "qrcode": True
+    })
+
+
+

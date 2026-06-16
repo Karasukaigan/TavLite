@@ -4,7 +4,7 @@ Retrieve the application version.
 
 **Example Response:**
 ```json
-{ "version": "TavLite v1.0.0" }
+{ "version": "TavLite v1.1.0" }
 ```
 
 ---

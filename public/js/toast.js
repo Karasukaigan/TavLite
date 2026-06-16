@@ -70,6 +70,7 @@
                     container.removeChild(toastMsg);
                 }, { once: true });
             }, time);
+            console.log('[Toast]', message);
         }
     };
 

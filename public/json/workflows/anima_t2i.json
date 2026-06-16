@@ -1,0 +1,128 @@
+{
+  "46": {
+    "inputs": {
+      "filename_prefix": "Anima",
+      "images": [
+        "73",
+        0
+      ]
+    },
+    "class_type": "SaveImage",
+    "_meta": {
+      "title": "Save Image"
+    }
+  },
+  "71": {
+    "inputs": {
+      "clip_name": "anima_baseV10_txt.safetensors",
+      "type": "stable_diffusion",
+      "device": "default"
+    },
+    "class_type": "CLIPLoader",
+    "_meta": {
+      "title": "Load CLIP"
+    }
+  },
+  "72": {
+    "inputs": {
+      "vae_name": "qwen_image_vae.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "Load VAE"
+    }
+  },
+  "73": {
+    "inputs": {
+      "samples": [
+        "76",
+        0
+      ],
+      "vae": [
+        "72",
+        0
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE Decode"
+    }
+  },
+  "74": {
+    "inputs": {
+      "width": 1024,
+      "height": 1024,
+      "batch_size": 1
+    },
+    "class_type": "EmptyLatentImage",
+    "_meta": {
+      "title": "Empty Latent Image"
+    }
+  },
+  "75": {
+    "inputs": {
+      "text": "worst quality, low quality, score_1, score_2, score_3",
+      "clip": [
+        "71",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Negative Prompt)"
+    }
+  },
+  "76": {
+    "inputs": {
+      "seed": 0,
+      "steps": 30,
+      "cfg": 4,
+      "sampler_name": "er_sde",
+      "scheduler": "simple",
+      "denoise": 1,
+      "model": [
+        "78",
+        0
+      ],
+      "positive": [
+        "77",
+        0
+      ],
+      "negative": [
+        "75",
+        0
+      ],
+      "latent_image": [
+        "74",
+        0
+      ]
+    },
+    "class_type": "KSampler",
+    "_meta": {
+      "title": "KSampler"
+    }
+  },
+  "77": {
+    "inputs": {
+      "text": "(@ask \\(askzy\\):1), @iris yi, (masterpiece, best quality, amazing quality, very aesthetic, extremely detailed, very detailed, absurdres, newest, highres, score_9, score_8), anime, depth of field, (bloom effects), ",
+      "clip": [
+        "71",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Positive Prompt)"
+    }
+  },
+  "78": {
+    "inputs": {
+      "unet_name": "anima_baseV10.safetensors",
+      "weight_dtype": "default"
+    },
+    "class_type": "UNETLoader",
+    "_meta": {
+      "title": "UNet Loader"
+    }
+  }
+}

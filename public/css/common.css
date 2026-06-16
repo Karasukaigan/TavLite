@@ -1,0 +1,262 @@
+:root {
+    --font-family: 'Microsoft Yahei', 'PingFang SC', Arial, sans-serif;
+}
+
+body {
+    font-family: var(--font-family);
+    margin: 0;
+    padding: 0;
+    user-select: none;
+}
+
+a {
+    color: #ddd;
+    text-decoration: none;
+    transition: color 0.1s ease;
+}
+
+a:hover { color: #000; }
+
+button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    outline: none;
+}
+
+button svg {
+    width: 16px;
+    min-width: 16px;
+    height: 16px;
+    fill: currentColor;
+}
+
+svg {
+    width: 16px;
+    min-width: 16px;
+    height: 16px;
+}
+
+svg:focus { outline: none; }
+
+input[type="text"],
+input[type="password"],
+input[type="search"],
+input[type="number"],
+select {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 16px;
+    box-sizing: border-box;
+    outline: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+}
+
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+input[type="number"] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
+
+select::-ms-expand {
+    display: none;
+}
+
+textarea {
+    font-family: var(--font-family);
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 16px;
+    box-sizing: border-box;
+    outline: none;
+    resize: vertical;
+}
+
+.modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-overlay.show {
+    display: flex;
+}
+
+.modal-dialog-confirm {
+    position: relative;
+    width: auto !important;
+    height: auto !important;
+    max-width: 420px;
+    min-width: 280px;
+    padding: 24px;
+    margin: 10px;
+    background: var(--bg-modal, #fff);
+    color: var(--color-modal, #000);
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    overflow: hidden;
+}
+
+.confirm-header {
+    margin-bottom: 12px;
+}
+
+.confirm-title {
+    font-size: 18px;
+    font-weight: bold;
+}
+
+.confirm-body {
+    overflow: visible;
+    height: auto;
+}
+
+.confirm-message {
+    font-size: 14px;
+    line-height: 1.5;
+    user-select: text;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.confirm-input {
+    width: 100%;
+    padding: 10px;
+    margin-top: 12px;
+    border: 1px solid var(--border-modal-input, #ddd);
+    border-radius: 8px;
+    font-size: 14px;
+    box-sizing: border-box;
+    outline: none;
+    background: var(--bg-modal-input, #fff);
+    color: var(--color-modal-input, #000);
+}
+
+.confirm-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.confirm-btn {
+    padding: 8px 20px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    font-family: var(--font-family);
+    transition: background-color 0.1s ease;
+    min-width: 70px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.confirm-btn-cancel {
+    background: var(--bg-modal-btn, #f0f0f0);
+    color: var(--color-modal-btn, #333);
+}
+
+.confirm-btn-cancel:hover {
+    background: var(--bg-modal-btn-hover, #e0e0e0);
+}
+
+.confirm-btn-ok {
+    background: var(--bg-modal-btn-primary, #007aff);
+    color: #fff;
+}
+
+.confirm-btn-ok:hover {
+    background: var(--bg-modal-btn-primary-hover, #0066cc);
+}
+
+.modal-dialog {
+    position: relative;
+    background: #fff;
+    border-radius: 12px;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    margin: 10px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+}
+
+.modal-close-btn {
+    position: absolute;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #999;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.modal-close-btn:hover {
+    background: none;
+    color: #333;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 15px;
+}
+
+.modal-title {
+    font-size: 20px;
+    font-weight: bold;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    user-select: text;
+}
+
+.modal-body {
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    height: 100%;
+}
+
+.tags-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.tag-item {
+    display: inline-flex;
+    align-items: center;
+    padding: 1px 8px;
+    background: #f0f0f0;
+    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+    font-size: 12px;
+    color: #555;
+    white-space: nowrap;
+}

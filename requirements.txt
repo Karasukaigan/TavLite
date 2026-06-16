@@ -9,3 +9,7 @@ openai
 Pillow
 pystray
 aiohttp
+tiktoken
+zeroconf
+trustme
+Jinja2
